@@ -26,6 +26,13 @@ def _ortohnorm_basis(_n_pts, _dim, _seed=None):
 
 
 def _add_isotropic_noise(_y, _sigma, _seed=None):
+    """
+
+    :param _y:
+    :param _sigma:
+    :param _seed:
+    :return:
+    """
     r_num = _rng(_seed)
     return _y + _sigma * r_num.normal(size=_y.shape)
 
@@ -147,38 +154,3 @@ def generate_collapsed_torus(_n_pts, _dim, _eps=0.1,
     y[:, :3] = y3
     x = _add_isotropic_noise(y, _eps, r_num)
     return x, y
-
-
-def pc_pipeline_test():
-    npts = 200
-    dim = 50
-    seed = 17
-    all_pc = {}
-    all_pc['gauss'] = generate_gaussian(npts, dim)
-    all_pc['sphere'] = generate_noisy_sphere(npts, dim, _seed=seed)[0]
-    all_pc['collapse_linear'] = generate_collapsed_linear(npts, dim, 4, _seed=seed)[0]
-    all_pc['collapse_swiss'] = generate_collapsed_swiss(npts, dim, _seed=seed)[0]
-    all_pc['collapse_torus'] = generate_collapsed_torus(npts, dim, _seed=seed)[0]
-    return all_pc
-
-
-# if __name__ == "__main__":
-#     x = run_single_dataset(generate_gaussian, _n_pts=200, _dim=50, _seed=17)
-#     print(x.shape)
-#
-    # npts = [200, 500, 1000, 10000, 50000]
-    # dims = [5, 10, 50, 100, 300]
-    # seed = 17
-    # for n in npts:
-    #     for d in dims:
-    #         g1 = generate_gaussian(n, d)
-    #         print("Gaussian shape: {}".format(g1.shape))
-    #         xs1, ys1 = sample_noisy_sphere(n, d, _seed=seed)
-    #         print("Noisy sphere shape: {}".format(xs1.shape))
-    #         xl1, yl1, u = sample_collapsed_linear(n, d, 4, _seed=seed)
-    #         print("Collapsed linear shape: {}".format(xl1.shape))
-    #         xsw, ysw = sample_collapsed_swiss(n, d, _seed=seed)
-    #         print("Collapsed Swiss shape: {}".format(xsw.shape))
-    #         xct, yct = sample_collapsed_torus(n, d, _seed=seed)
-    #         print("Collapsed Torus shape: {}".format(xct.shape))
-

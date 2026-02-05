@@ -3,8 +3,6 @@ import gudhi as gd
 
 from gudhi.dtm_rips_complex import DTMRipsComplex
 
-from point_clouds import pc_pipeline_test
-
 
 def _diag_by_dim(_tree, _max_dim):
     """
@@ -49,11 +47,3 @@ def compute_dtm_vr_diagrams(_points, _max_filtration=100, _k=10, _q=2, _max_dim=
     dtm_rips = DTMRipsComplex(points=_points, k=_k, q=_q, max_filtration=_max_filtration)
     st = dtm_rips.create_simplex_tree(max_dimension=_max_dim + 1)
     return _diag_by_dim(st, _max_dim)
-
-
-if __name__ == "__main__":
-    pc_dict = pc_pipeline_test()
-    for p in list(pc_dict.keys()):
-        print('Running for point cloud {}'.format(p))
-        compute_vr_diagrams(pc_dict[p], 3)
-        compute_dtm_vr_diagrams(pc_dict[p], 3)
