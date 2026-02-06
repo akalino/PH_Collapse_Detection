@@ -17,6 +17,7 @@ $k$-manifold $\mathcal{M} \subset \mathbb{R}^d$ and
 $Z_i \sim \mathcal{N}(0, \Sigma)$ with $\epsilon \rightarrow 0$.
 Here, $\epsilon$ is the coefficient for added isotropic noise
 (big is more noise, small is less noise).  
+**So larger $\epsilon$ mean a further drift away from the underlying collapse.**
 
 To consider: 
 * [ ] include $\epsilon=0$ as a noise-free manifold? (immediate complex co/dis-nnect)
