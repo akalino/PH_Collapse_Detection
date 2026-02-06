@@ -5,7 +5,7 @@ Use persistent homology to detect degenerating covariance /
 collapse to lower intrinsic dimension.
 
 At some juncture in studying the topology of point clouds, there becomes 
-less interest in studying the actual topology, and the question turns to
+less interest in studying the actual topology, and the question turns to:
 
 Can we detect, quantify, or test that collapse is happening using 
 persistence?
@@ -14,11 +14,17 @@ persistence?
 
 $X_i = Y_i + \epsilon Z_i$ where $Y_i \sim \mu$ is supported on some
 $k$-manifold $\mathcal{M} \subset \mathbb{R}^d$ and 
-$Z_i \sim \mathcal{N}(0, \Sigma)$ with $\epsilon \rightarrow 0$
+$Z_i \sim \mathcal{N}(0, \Sigma)$ with $\epsilon \rightarrow 0$.
+Here, $\epsilon$ is the coefficient for added isotropic noise
+(big is more noise, small is less noise).  
+
+To consider: 
+* [ ] include $\epsilon=0$ as a noise-free manifold? (immediate complex co/dis-nnect)
 
 We're interested in when the covariance matrix $\Sigma_\epsilon$ 
 collapses ($\rightarrow \inf$),
-or **equivalently when the effective dimension drops from $d$ to $k$**.
+or **equivalently when the effective dimension drops from $d$ to $k$**
+w.r.t $\epsilon$ increases.
 
 Questions then become:
 * can we test a hypothesis of "full dimension vs. collapsed dimension"?
@@ -40,7 +46,7 @@ $H_1: X \sim \mathcal{D}_{k,\epsilon}$ (collapses to $k$-dimensional structure a
 where the following are true:
 * all live in $\mathbb{R}^d$,
 * all have identical first moments,
-* they differ only in covariance (supporting dimensions (PCA useful here)).
+* they differ only in covariance (supporting dimensions (PCA useful here?)).
 
 ### Datasets:
 
@@ -66,6 +72,14 @@ where the following are true:
 1) VR-complex 
 2) Cech complex (maybe drop due to computation)
 3) DTM filtration
+
+For each of the above, we sweep $\epsilon \in \{0.05, 0.1, 0.2, 0.5\}$,
+**which controls for the strength of the collapse.** 
+This allows us to 
+calibrate the null hypotheses (two point clouds) for a fixed $n,d$ to 
+allow the tests to compute the power of their ability to measure collapse.
+The expectation is that as $\epsilon$ decreases (stronger collapse),
+the persistence-based test rejects the null more often.
 
 #### Test Statistics Computed
 

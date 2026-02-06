@@ -52,6 +52,16 @@ def tail_count(_diagrams_by_dim, _dims, _tau):
     return int(c)
 
 
+def choose_dtm_k(n, mass=0.1, min_k=5, max_k=None):
+    k = int(np.ceil(mass * n))
+    k = max(k, min_k)
+    if max_k is not None:
+        k = min(k, max_k)
+    k = min(k, n - 1)      # DTMRips requires k <= n-1
+    k = max(k, 1)          # and k >= 1
+    return k
+
+
 def compute_statistics(_x, _dims, _p, _tau, _knn_est):
     """
     Runs the two tests from a single persistence diagram.
@@ -68,9 +78,9 @@ def compute_statistics(_x, _dims, _p, _tau, _knn_est):
     out['vr'] = {'tail_count': tail_count(vr_res, _dims, _tau)}
     out['vr']['total_persistence'] = total_persistence(vr_res, _dims, _p=_p)
 
-    dtm_mass = 0.1
-    dtm_k = int(np.ceil(dtm_mass * _x.shape[0]))
-    dtm_res = compute_dtm_vr_diagrams(_x, _knn_est, dtm_k)
-    out['dtm'] = {'dtm_tail_count': tail_count(dtm_res, _dims, _tau)}
+    dtm_k = choose_dtm_k(_x.shape[0], mass=0.1, min_k=5)
+    dtm_max_f = 2.0 * _knn_est
+    dtm_res = compute_dtm_vr_diagrams(_x, dtm_max_f, dtm_k)
+    out['dtm'] = {'tail_count': tail_count(dtm_res, _dims, _tau)}
     out['dtm']['total_persistence'] = total_persistence(dtm_res, _dims, _p=_p)
     return out
