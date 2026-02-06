@@ -20,6 +20,14 @@ def _diag_by_dim(_tree, _max_dim):
     return out
 
 
+def debug_simplex_tree(st, label=""):
+    print(f"\n[{label}] simplex_tree dim =", st.dimension())
+    print(f"[{label}] num simplices =", st.num_simplices())
+    # If you want: inspect filtration range
+    fvals = [st.filtration(s[0]) for s in st.get_skeleton(st.dimension())]
+    print(f"[{label}] filtration min/max =", min(fvals), max(fvals))
+
+
 def compute_vr_diagrams(_points, _max_edge_length, _max_dim=3, _sparse=None):
     """
 
@@ -46,4 +54,5 @@ def compute_dtm_vr_diagrams(_points, _max_filtration=100, _k=10, _q=2, _max_dim=
     """
     dtm_rips = DTMRipsComplex(points=_points, k=_k, q=_q, max_filtration=_max_filtration)
     st = dtm_rips.create_simplex_tree(max_dimension=_max_dim + 1)
+    # debug_simplex_tree(st, label=f"DTM k={_k} max_f={_max_filtration}")
     return _diag_by_dim(st, _max_dim)

@@ -4,10 +4,13 @@ import numpy as np
 
 def _rng(_seed=None):
     """
-    Builds random number generator object for a seed.
-    :param _seed: random seed (int).
-    :return: numpy random generator.
+    Random number generator wrapper.
+
+    :param _seed: Seeding rng.
+    :return: seed.
     """
+    if isinstance(_seed, np.random.Generator):
+        return _seed
     return np.random.default_rng(_seed)
 
 
