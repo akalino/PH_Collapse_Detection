@@ -24,4 +24,4 @@ if __name__ == "__main__":
             crit_sphere['point_cloud'] = 'noisy_sphere'
             sphere_benchmarks.append(crit_sphere)
     out = pd.concat(gauss_benchmarks + sphere_benchmarks, axis=0)
-    out.to_csv('null.csv', index=False)
+    out.to_csv('null_simulation.csv', index=False)

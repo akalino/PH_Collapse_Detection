@@ -1,4 +1,3 @@
-# analyze_ph_tests.py
 import numpy as np
 import pandas as pd
 from collections import defaultdict
@@ -6,33 +5,21 @@ from collections import defaultdict
 NULL_PATH = "null.csv"
 ALT_PATH  = "alt_simulation.csv"
 
-# --------------------------
-# User settings
-# --------------------------
 ALPHA = 0.05
 
-# Choose which null point clouds define "H0" for calibration.
-# If you set this to BOTH, you are calibrating a mixture null.
-CALIB_NULLS = ["gaussian", "noisy_sphere"]   # or ["gaussian"]
-
-# One-sided direction per statistic:
-# For collapse detection, you often want LOWER-tail (collapse => less high-dim topology).
-# But if you find Type I is weird for tail_count, try setting tail_count to "upper".
+# One-sided direction per statistic
 DIRECTION_BY_STAT = {
     "total_persistence": "lower",
     "tail_count": "lower",
 }
 
-# Calibration granularity
-GROUP_COLS = ["n_pts", "dim", "filtration"]
+GROUP_COLS = ["n_pts", "dim", "filtration"]     # calibration keys
 STAT_COLS  = ["total_persistence", "tail_count"]
 
-
-# --------------------------
+# -----------------------
 # Helpers
-# --------------------------
+# -----------------------
 def empirical_pvalue(val: float, samples: np.ndarray, direction: str) -> float:
-    """Conservative empirical one-sided p-value."""
     samples = np.asarray(samples, dtype=float)
     if direction == "lower":
         return (1.0 + np.sum(samples <= val)) / (samples.size + 1.0)
@@ -42,32 +29,21 @@ def empirical_pvalue(val: float, samples: np.ndarray, direction: str) -> float:
         raise ValueError("direction must be 'lower' or 'upper'")
 
 def critical_value(samples: np.ndarray, alpha: float, direction: str) -> float:
-    """One-sided critical value."""
     samples = np.asarray(samples, dtype=float)
     q = alpha if direction == "lower" else (1 - alpha)
     return float(np.quantile(samples, q))
 
 def build_null_samples(null_df: pd.DataFrame) -> dict:
-    """
-    Returns:
-      null_samples[(n_pts, dim, filtration)][stat] -> np.array of samples
-    """
-    null_samples = defaultdict(dict)
+    null_samples = defaultdict(dict)  # (n_pts, dim, filtration) -> stat -> array
     for keys, g in null_df.groupby(GROUP_COLS, dropna=False):
         for stat in STAT_COLS:
             null_samples[keys][stat] = g[stat].to_numpy(dtype=float)
     return null_samples
 
-def calibrate(null_df: pd.DataFrame, alpha: float) -> tuple[pd.DataFrame, dict]:
-    """
-    Returns:
-      crit_df: long DF with crit values per (n_pts,dim,filtration,stat)
-      crit_lookup: dict[(n_pts,dim,filtration,stat)] = (crit, direction)
-    """
-    rows = []
-    crit_lookup = {}
-
+def calibrate(null_df: pd.DataFrame, alpha: float):
     null_samples = build_null_samples(null_df)
+    crit_lookup = {}
+    crit_rows = []
 
     for key, stat_dict in null_samples.items():
         n_pts, dim, filtration = key
@@ -75,7 +51,8 @@ def calibrate(null_df: pd.DataFrame, alpha: float) -> tuple[pd.DataFrame, dict]:
             direction = DIRECTION_BY_STAT.get(stat, "lower")
             crit = critical_value(stat_dict[stat], alpha=alpha, direction=direction)
 
-            rows.append({
+            crit_lookup[(n_pts, dim, filtration, stat)] = (crit, direction)
+            crit_rows.append({
                 "n_pts": n_pts,
                 "dim": dim,
                 "filtration": filtration,
@@ -85,104 +62,83 @@ def calibrate(null_df: pd.DataFrame, alpha: float) -> tuple[pd.DataFrame, dict]:
                 "crit": crit,
                 "n_null": int(len(stat_dict[stat])),
             })
-            crit_lookup[(n_pts, dim, filtration, stat)] = (crit, direction)
 
-    crit_df = pd.DataFrame(rows).sort_values(GROUP_COLS + ["stat"]).reset_index(drop=True)
+    crit_df = pd.DataFrame(crit_rows).sort_values(GROUP_COLS + ["stat"]).reset_index(drop=True)
     return crit_df, crit_lookup, null_samples
 
 def apply_tests(df: pd.DataFrame, crit_lookup: dict, null_samples: dict, label: str) -> pd.DataFrame:
-    """
-    Produces a long DF with one row per (original row × statistic).
-    Adds reject + p_value.
-    """
-    out_rows = []
-
+    out = []
     for _, r in df.iterrows():
         key_base = (int(r["n_pts"]), int(r["dim"]), str(r["filtration"]))
-
         for stat in STAT_COLS:
             lk = (key_base[0], key_base[1], key_base[2], stat)
             if lk not in crit_lookup:
-                # No calibration available for this (n,d,filtration)
                 continue
 
             crit, direction = crit_lookup[lk]
             val = float(r[stat])
-
             reject = (val <= crit) if direction == "lower" else (val >= crit)
             pval = empirical_pvalue(val, null_samples[key_base][stat], direction)
 
-            out_rows.append({
+            row_out = {
                 "set": label,
-                "point_cloud": r["point_cloud"],
+                "point_cloud": r.get("point_cloud", None),
                 "n_pts": key_base[0],
                 "dim": key_base[1],
                 "filtration": key_base[2],
-                "seed": int(r["seed"]),
+                "seed": int(r.get("seed", -1)),
                 "stat": stat,
                 "value": val,
                 "crit": crit,
                 "direction": direction,
                 "reject": int(reject),
                 "p_value": float(pval),
-            })
+            }
 
-    return pd.DataFrame(out_rows)
+            # Carry epsilon through if it exists (alternatives will have it)
+            if "eps" in df.columns:
+                row_out["eps"] = r.get("eps", np.nan)
 
-def summarize_rejections(tested: pd.DataFrame, by_point_cloud: bool = True) -> pd.DataFrame:
-    group = (["point_cloud"] if by_point_cloud else []) + GROUP_COLS + ["stat"]
-    return (tested.groupby(group, dropna=False)["reject"]
-            .mean()
-            .reset_index()
-            .rename(columns={"reject": "rejection_rate"}))
+            out.append(row_out)
 
+    return pd.DataFrame(out)
 
-# --------------------------
+# -----------------------
 # Main
-# --------------------------
+# -----------------------
 if __name__ == "__main__":
-    null_all = pd.read_csv(NULL_PATH)
-    alt_all  = pd.read_csv(ALT_PATH)
+    null_df = pd.read_csv(NULL_PATH)
+    alt_df  = pd.read_csv(ALT_PATH)
 
-    # Choose calibration null subset
-    null_calib = null_all[null_all["point_cloud"].isin(CALIB_NULLS)].copy()
-
-    # Calibrate
-    crit_df, crit_lookup, null_samples = calibrate(null_calib, alpha=ALPHA)
-
-    # Identify missing calibration combos in alternatives
-    null_groups = set(tuple(x) for x in null_calib[GROUP_COLS].drop_duplicates().to_numpy())
-    alt_groups  = set(tuple(x) for x in alt_all[GROUP_COLS].drop_duplicates().to_numpy())
-    missing = sorted(list(alt_groups - null_groups))
-
-    if missing:
-        print("\nWARNING: Some alternative (n_pts,dim,filtration) combos are not present in calibration nulls.")
-        print("They will be skipped in testing. Missing combos:")
-        for m in missing:
-            print("  ", m)
+    # Calibrate on all null runs (or filter if you want)
+    crit_df, crit_lookup, null_samples = calibrate(null_df, alpha=ALPHA)
 
     # Apply tests
-    null_tested = apply_tests(null_all, crit_lookup, null_samples, label="null")
-    alt_tested  = apply_tests(alt_all,  crit_lookup, null_samples, label="alt")
+    null_tested = apply_tests(null_df, crit_lookup, null_samples, label="null")
+    alt_tested  = apply_tests(alt_df,  crit_lookup, null_samples, label="alt")
 
-    # Summaries
-    # Correct Type I check = on the SAME pooled null used for calibration:
-    null_type1 = null_tested[null_tested["point_cloud"].isin(CALIB_NULLS)].copy()
-
-    print("\n=== Critical values (first 20 rows) ===")
-    print(crit_df.head(20).to_string(index=False))
-
-    print("\n=== Type I error estimates (pooled over calibration nulls) ===")
-    print(summarize_rejections(null_type1, by_point_cloud=False).to_string(index=False))
-
-    print("\n=== Type I error by null point cloud (diagnostic) ===")
-    print(summarize_rejections(null_type1, by_point_cloud=True).to_string(index=False))
-
-    print("\n=== Alternative rejection rates (empirical power) ===")
-    print(summarize_rejections(alt_tested, by_point_cloud=True).to_string(index=False))
-
-    # Optional: save run-level tested outputs
+    # Save run-level tested outputs
+    crit_df.to_csv("null_crit.csv", index=False)
     null_tested.to_csv("null_tested.csv", index=False)
     alt_tested.to_csv("alternatives_tested.csv", index=False)
-    crit_df.to_csv("null_crit.csv", index=False)
-    print("\nWrote: null_crit.csv, null_tested.csv, alternatives_tested.csv")
+
+    # --- Summaries ---
+    # Type I error (overall)
+    null_summary = (null_tested.groupby(["point_cloud"] + GROUP_COLS + ["stat"], dropna=False)["reject"]
+                    .mean().reset_index().rename(columns={"reject": "rejection_rate"}))
+
+    # Power / rejection rates for alternatives — INCLUDE EPSILON if present
+    if "epsilon" in alt_tested.columns:
+        alt_group = ["point_cloud", "epsilon"] + GROUP_COLS + ["stat"]
+    else:
+        alt_group = ["point_cloud"] + GROUP_COLS + ["stat"]
+
+    alt_summary = (alt_tested.groupby(alt_group, dropna=False)["reject"]
+                   .mean().reset_index().rename(columns={"reject": "rejection_rate"}))
+
+    null_summary.to_csv("null_summary.csv", index=False)
+    alt_summary.to_csv("alternatives_summary.csv", index=False)
+
+    print("Wrote: null_crit.csv, null_tested.csv, alternatives_tested.csv, null_summary.csv, alternatives_summary.csv")
+    print("\nAlternatives summary (head):")
+    print(alt_summary.head(20).to_string(index=False))
