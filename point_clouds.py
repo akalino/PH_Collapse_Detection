@@ -70,7 +70,7 @@ def generate_noisy_sphere(_n_pts, _dim, _noise_sig=0.3, _radius=1.0, _seed=None)
     z /= np.linalg.norm(z, axis=1, keepdims=True)
     y = _radius * z
     x = _add_isotropic_noise(y, _noise_sig, _seed)
-    return x, y
+    return x
 
 
 def generate_collapsed_linear(_n_pts, _dim, _k=3, _eps=0.1, _spread=1.0, _seed=None):
@@ -92,7 +92,7 @@ def generate_collapsed_linear(_n_pts, _dim, _k=3, _eps=0.1, _spread=1.0, _seed=N
     s = _spread * r_num.normal(size=(_n_pts, _k))
     y = s @ u.T
     x = _add_isotropic_noise(y, _eps, r_num)
-    return x, y, u
+    return x  # , y, u
 
 
 def generate_collapsed_swiss(_n_pts, _dim, _eps=0.1,
@@ -127,7 +127,7 @@ def generate_collapsed_swiss(_n_pts, _dim, _eps=0.1,
 
     # add noise
     x = _add_isotropic_noise(y, _eps, r_num)
-    return x, y
+    return x  #, y
 
 
 def generate_collapsed_torus(_n_pts, _dim, _eps=0.1,
@@ -156,7 +156,7 @@ def generate_collapsed_torus(_n_pts, _dim, _eps=0.1,
     y = np.zeros((_n_pts, _dim))
     y[:, :3] = y3
     x = _add_isotropic_noise(y, _eps, r_num)
-    return x, y
+    return x  #, y
 
 
 def generate_spiked_gaussian(_n_pts, _dim, _k=3, _eps=0.1,
