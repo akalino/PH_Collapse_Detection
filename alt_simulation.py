@@ -10,7 +10,7 @@ from utils import shared_simulation
 if __name__ == "__main__":
     np_list = [10, 50, 100]
     dim_list = [5, 10, 20]
-    eps = [0.05, 0.1, 0.2, 0.5]
+    eps = [0.05, 0.1, 0.2, 0.5, 1.0, 1.5, 2.0]
     k_plane_benchmarks = []
     swiss_roll_benchmarks = []
     torus_benchmarks = []
@@ -31,4 +31,4 @@ if __name__ == "__main__":
                 crit_torus['point_cloud'] = 'torus'
                 torus_benchmarks.append(crit_torus)
     out = pd.concat(k_plane_benchmarks + swiss_roll_benchmarks + torus_benchmarks, axis=0)
-    out.to_csv('alt_simulation.csv', index=False)
+    out.to_csv('simulations/alt_simulation.csv', index=False)

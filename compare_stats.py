@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 from collections import defaultdict
 
-NULL_PATH = "null.csv"
-ALT_PATH  = "alt_simulation.csv"
+NULL_PATH = "simulations/null_simulation.csv"
+ALT_PATH  = "simulations/alt_simulation.csv"
 
 ALPHA = 0.05
 
@@ -16,10 +16,15 @@ DIRECTION_BY_STAT = {
 GROUP_COLS = ["n_pts", "dim", "filtration"]     # calibration keys
 STAT_COLS  = ["total_persistence", "tail_count"]
 
-# -----------------------
-# Helpers
-# -----------------------
-def empirical_pvalue(val: float, samples: np.ndarray, direction: str) -> float:
+
+def empirical_pvalue(val, samples, direction):
+    """
+
+    :param val:
+    :param samples:
+    :param direction:
+    :return:
+    """
     samples = np.asarray(samples, dtype=float)
     if direction == "lower":
         return (1.0 + np.sum(samples <= val)) / (samples.size + 1.0)
@@ -28,19 +33,40 @@ def empirical_pvalue(val: float, samples: np.ndarray, direction: str) -> float:
     else:
         raise ValueError("direction must be 'lower' or 'upper'")
 
-def critical_value(samples: np.ndarray, alpha: float, direction: str) -> float:
+
+def critical_value(samples, alpha, direction):
+    """
+
+    :param samples:
+    :param alpha:
+    :param direction:
+    :return:
+    """
     samples = np.asarray(samples, dtype=float)
     q = alpha if direction == "lower" else (1 - alpha)
     return float(np.quantile(samples, q))
 
-def build_null_samples(null_df: pd.DataFrame) -> dict:
+
+def build_null_samples(null_df):
+    """
+
+    :param null_df:
+    :return:
+    """
     null_samples = defaultdict(dict)  # (n_pts, dim, filtration) -> stat -> array
     for keys, g in null_df.groupby(GROUP_COLS, dropna=False):
         for stat in STAT_COLS:
             null_samples[keys][stat] = g[stat].to_numpy(dtype=float)
     return null_samples
 
-def calibrate(null_df: pd.DataFrame, alpha: float):
+
+def calibrate(null_df, alpha):
+    """
+
+    :param null_df:
+    :param alpha:
+    :return:
+    """
     null_samples = build_null_samples(null_df)
     crit_lookup = {}
     crit_rows = []
@@ -66,7 +92,16 @@ def calibrate(null_df: pd.DataFrame, alpha: float):
     crit_df = pd.DataFrame(crit_rows).sort_values(GROUP_COLS + ["stat"]).reset_index(drop=True)
     return crit_df, crit_lookup, null_samples
 
-def apply_tests(df: pd.DataFrame, crit_lookup: dict, null_samples: dict, label: str) -> pd.DataFrame:
+
+def apply_tests(df, crit_lookup, null_samples, label):
+    """
+
+    :param df:
+    :param crit_lookup:
+    :param null_samples:
+    :param label:
+    :return:
+    """
     out = []
     for _, r in df.iterrows():
         key_base = (int(r["n_pts"]), int(r["dim"]), str(r["filtration"]))
@@ -103,31 +138,22 @@ def apply_tests(df: pd.DataFrame, crit_lookup: dict, null_samples: dict, label: 
 
     return pd.DataFrame(out)
 
-# -----------------------
-# Main
-# -----------------------
 if __name__ == "__main__":
     null_df = pd.read_csv(NULL_PATH)
     alt_df  = pd.read_csv(ALT_PATH)
 
-    # Calibrate on all null runs (or filter if you want)
     crit_df, crit_lookup, null_samples = calibrate(null_df, alpha=ALPHA)
-
-    # Apply tests
     null_tested = apply_tests(null_df, crit_lookup, null_samples, label="null")
     alt_tested  = apply_tests(alt_df,  crit_lookup, null_samples, label="alt")
+    crit_df.to_csv("comparisons/null_crit.csv", index=False)
+    null_tested.to_csv("comparisons/null_tested.csv", index=False)
+    alt_tested.to_csv("comparisons/alternatives_tested.csv", index=False)
 
-    # Save run-level tested outputs
-    crit_df.to_csv("null_crit.csv", index=False)
-    null_tested.to_csv("null_tested.csv", index=False)
-    alt_tested.to_csv("alternatives_tested.csv", index=False)
-
-    # --- Summaries ---
     # Type I error (overall)
     null_summary = (null_tested.groupby(["point_cloud"] + GROUP_COLS + ["stat"], dropna=False)["reject"]
                     .mean().reset_index().rename(columns={"reject": "rejection_rate"}))
 
-    # Power / rejection rates for alternatives — INCLUDE EPSILON if present
+    # Power / rejection rates for alternatives
     if "epsilon" in alt_tested.columns:
         alt_group = ["point_cloud", "epsilon"] + GROUP_COLS + ["stat"]
     else:
@@ -136,9 +162,7 @@ if __name__ == "__main__":
     alt_summary = (alt_tested.groupby(alt_group, dropna=False)["reject"]
                    .mean().reset_index().rename(columns={"reject": "rejection_rate"}))
 
-    null_summary.to_csv("null_summary.csv", index=False)
-    alt_summary.to_csv("alternatives_summary.csv", index=False)
+    null_summary.to_csv("comparisons/null_summary.csv", index=False)
+    alt_summary.to_csv("comparisons/alternatives_summary.csv", index=False)
 
     print("Wrote: null_crit.csv, null_tested.csv, alternatives_tested.csv, null_summary.csv, alternatives_summary.csv")
-    print("\nAlternatives summary (head):")
-    print(alt_summary.head(20).to_string(index=False))
