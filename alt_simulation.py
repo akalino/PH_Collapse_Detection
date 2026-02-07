@@ -3,7 +3,8 @@ import pandas as pd
 
 from tqdm import tqdm
 
-from point_clouds import generate_collapsed_linear, generate_collapsed_swiss, generate_collapsed_torus
+from point_clouds import generate_collapsed_linear, generate_collapsed_swiss, generate_collapsed_torus, \
+    generate_spiked_gaussian, generate_contaminated_kplane, generate_paraboloid_graph
 from utils import shared_simulation
 
 
@@ -14,6 +15,9 @@ if __name__ == "__main__":
     k_plane_benchmarks = []
     swiss_roll_benchmarks = []
     torus_benchmarks = []
+    spiked_benchmark = []
+    contaminated_kplane_benchmark = []
+    paraboloid_graph_benchmark = []
     for n in np_list:
         for d in dim_list:
             for e in eps:
@@ -30,5 +34,22 @@ if __name__ == "__main__":
                                              0.1, 0.1, 100, e, 17)
                 crit_torus['point_cloud'] = 'torus'
                 torus_benchmarks.append(crit_torus)
-    out = pd.concat(k_plane_benchmarks + swiss_roll_benchmarks + torus_benchmarks, axis=0)
+                crit_spiked_gaussian = shared_simulation(generate_spiked_gaussian, n, d, [0, 1, 2],
+                                                         0.1, 0.1,100, e, 17)
+                crit_spiked_gaussian['point_cloud'] = 'spiked_gaussian'
+                spiked_benchmark.append(crit_spiked_gaussian)
+                crit_contaminated_kplane = shared_simulation(generate_contaminated_kplane,n, d, [0, 1, 2],
+                                                             0.1, 0.1,100, e, 17)
+                crit_contaminated_kplane['point_cloud'] = 'contaminated_kplane'
+                contaminated_kplane_benchmark.append(crit_contaminated_kplane)
+                crit_paraboloid = shared_simulation(generate_paraboloid_graph, n, d, [0, 1, 2],
+                                                    0.1, 0.1, 100, e, 17)
+                crit_paraboloid['point_cloud'] = 'paraboloid_graph'
+                paraboloid_graph_benchmark.append(crit_paraboloid)
+    out = pd.concat(k_plane_benchmarks +
+                    swiss_roll_benchmarks +
+                    torus_benchmarks +
+                    spiked_benchmark +
+                    contaminated_kplane_benchmark +
+                    paraboloid_graph_benchmark, axis=0)
     out.to_csv('simulations/alt_simulation.csv', index=False)
