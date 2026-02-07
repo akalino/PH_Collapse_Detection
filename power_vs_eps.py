@@ -2,30 +2,31 @@ import numpy as np
 import pandas as pd
 from collections import defaultdict
 
-# -----------------------
-# Inputs
-# -----------------------
-NULL_PATH = "null.csv"
-ALT_PATH  = "alt_simulation.csv"
 
-# If you already have a run-level tested file (one row per run×stat), set this:
-ALT_TESTED_PATH = None  # e.g. "alternatives_tested.csv" or leave None to recompute
+NULL_PATH = "simulations/null_simulation.csv"
+ALT_PATH  = "simulations/alt_simulation.csv"
+
+ALT_TESTED_PATH = "comparisons/alternatives_tested.csv"  # leave None to recompute
 
 ALPHA = 0.05
 GROUP_COLS = ["n_pts", "dim", "filtration"]
 STAT_COLS  = ["total_persistence", "tail_count"]
 
-# Directions for one-sided tests (adjust if you later decide tail_count should be "upper")
 DIRECTION_BY_STAT = {"total_persistence": "lower", "tail_count": "lower"}
 
-# Choose a PRIMARY test for the “single-test” power curve:
 PRIMARY_FILTRATION = "vr"          # "dtm" or "vr"
 PRIMARY_STAT = "total_persistence"  # "total_persistence" or "tail_count"
 
-# -----------------------
-# Helpers (only used if ALT_TESTED_PATH is None)
-# -----------------------
-def empirical_pvalue(val: float, samples: np.ndarray, direction: str) -> float:
+
+# NOTE: could strip these out as duplicates to their own stat_utils.py
+def empirical_pvalue(val, samples, direction):
+    """
+
+    :param val:
+    :param samples:
+    :param direction:
+    :return:
+    """
     samples = np.asarray(samples, dtype=float)
     if direction == "lower":
         return (1.0 + np.sum(samples <= val)) / (samples.size + 1.0)
@@ -34,10 +35,12 @@ def empirical_pvalue(val: float, samples: np.ndarray, direction: str) -> float:
     else:
         raise ValueError("direction must be 'lower' or 'upper'")
 
+
 def critical_value(samples: np.ndarray, alpha: float, direction: str) -> float:
     samples = np.asarray(samples, dtype=float)
     q = alpha if direction == "lower" else (1 - alpha)
     return float(np.quantile(samples, q))
+
 
 def build_null_samples(null_df: pd.DataFrame) -> dict:
     null_samples = defaultdict(dict)
@@ -45,6 +48,7 @@ def build_null_samples(null_df: pd.DataFrame) -> dict:
         for stat in STAT_COLS:
             null_samples[keys][stat] = g[stat].to_numpy(dtype=float)
     return null_samples
+
 
 def calibrate(null_df: pd.DataFrame, alpha: float):
     null_samples = build_null_samples(null_df)
@@ -56,6 +60,7 @@ def calibrate(null_df: pd.DataFrame, alpha: float):
             crit = critical_value(stat_dict[stat], alpha=alpha, direction=direction)
             crit_lookup[(n_pts, dim, filtration, stat)] = (crit, direction)
     return crit_lookup, null_samples
+
 
 def test_alternatives(alt_df: pd.DataFrame, crit_lookup: dict, null_samples: dict) -> pd.DataFrame:
     required = {"point_cloud","n_pts","dim","filtration","seed","eps"}
@@ -89,9 +94,8 @@ def test_alternatives(alt_df: pd.DataFrame, crit_lookup: dict, null_samples: dic
             })
     return pd.DataFrame(out)
 
-# -----------------------
+
 # Run-level aggregation rules
-# -----------------------
 def run_level_power_any(tested: pd.DataFrame) -> pd.DataFrame:
     """
     For each run (seed), reject if ANY test rejects.
@@ -108,6 +112,7 @@ def run_level_power_any(tested: pd.DataFrame) -> pd.DataFrame:
              .rename(columns={"run_reject_any":"power_any"}))
     return power
 
+
 def run_level_power_all(tested: pd.DataFrame) -> pd.DataFrame:
     """
     For each run (seed), reject if ALL available tests reject.
@@ -123,6 +128,7 @@ def run_level_power_all(tested: pd.DataFrame) -> pd.DataFrame:
              .reset_index()
              .rename(columns={"run_reject_all":"power_all"}))
     return power
+
 
 def run_level_power_primary(tested: pd.DataFrame, filtration: str, stat: str) -> pd.DataFrame:
     """
@@ -142,9 +148,7 @@ def run_level_power_primary(tested: pd.DataFrame, filtration: str, stat: str) ->
              .rename(columns={"run_reject_primary":"power_primary"}))
     return power
 
-# -----------------------
-# Main
-# -----------------------
+
 if __name__ == "__main__":
     if ALT_TESTED_PATH is not None:
         tested = pd.read_csv(ALT_TESTED_PATH)
@@ -163,10 +167,8 @@ if __name__ == "__main__":
     power_all = run_level_power_all(tested)
     power_primary = run_level_power_primary(tested, filtration=PRIMARY_FILTRATION, stat=PRIMARY_STAT)
 
-    power_any.to_csv("power_any.csv", index=False)
-    power_all.to_csv("power_all.csv", index=False)
-    power_primary.to_csv("power_primary.csv", index=False)
+    power_any.to_csv("powers/power_any.csv", index=False)
+    power_all.to_csv("powers/power_all.csv", index=False)
+    power_primary.to_csv("powers/power_primary.csv", index=False)
 
     print("Wrote: power_any.csv, power_all.csv, power_primary.csv")
-    print("\nPreview (primary):")
-    print(power_primary.sort_values(["point_cloud","n_pts","dim","eps"]).head(25).to_string(index=False))
