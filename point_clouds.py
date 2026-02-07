@@ -157,3 +157,120 @@ def generate_collapsed_torus(_n_pts, _dim, _eps=0.1,
     y[:, :3] = y3
     x = _add_isotropic_noise(y, _eps, r_num)
     return x, y
+
+
+def generate_spiked_gaussian(_n_pts, _dim, _k=3, _eps=0.1,
+                             _seed=None, _rotate=True):
+    """
+
+    :param _n_pts:
+    :param _dim:
+    :param _k:
+    :param _eps:
+    :param _seed:
+    :param _rotate:
+    :return:
+    """
+    if not (1 <= _k <= _dim):
+        raise ValueError("k must be in range [1, dim]")
+    r_num = _rng(_seed)
+
+    scales = np.ones(_dim)
+    scales[_k:] = _eps
+    x = r_num.normal(size=(_n_pts, _dim)) * scales[None, :]
+    if _rotate and _dim > 1:
+        u = _ortohnorm_basis(_dim, _dim, r_num)
+        x = x @ u.T
+    return x
+
+
+def generate_contaminated_kplane(_n_pts, _dim, _k=3,
+                                 _eps=0.1, _eta=0.1, _seed=None):
+    """
+
+    :param _n_pts:
+    :param _dim:
+    :param _k:
+    :param _eps:
+    :param _eta:
+    :param _seed:
+    :return:
+    """
+    if not (0.0 <= _eta <= 1.0):
+        raise ValueError("eta must be in [0,1].")
+    if not (1 <= _k <= _dim):
+        raise ValueError("k must be between 1 and dim.")
+    r_num = _rng(_seed)
+
+    m = int(np.round((1.0 - _eta) * _n_pts))
+    o = _n_pts - m
+
+    # Inliers: k-plane + eps isotropic noise
+    u = _ortohnorm_basis(_dim, _k, r_num)
+    s = r_num.normal(size=(m, _k))
+    y = s @ u.T
+    x_in = y + _eps * r_num.normal(size=(m, _dim))
+
+    # Outliers: full-dim clutter
+    x_out = r_num.normal(size=(o, _dim))
+
+    x = np.vstack([x_in, x_out])
+    r_num.shuffle(x, axis=0)
+    return x
+
+
+def generate_paraboloid_graph(_n_pts, _dim, _k=2, _eps=0.1, _amp=0.5, _seed=None):
+    """
+
+    :param _n_pts:
+    :param _dim:
+    :param _k:
+    :param _eps:
+    :param _amp:
+    :param _seed:
+    :return:
+    """
+    if _dim < _k + 1:
+        raise ValueError("Need dim >= k + 1 to embed paraboloid graph.")
+    r_num = _rng(_seed)
+
+    u = r_num.normal(size=(_n_pts, _k))
+    height = _amp * np.sum(u ** 2, axis=1, keepdims=True)
+
+    y = np.zeros((_n_pts, _dim))
+    y[:, :_k] = u
+    y[:, _k: _k + 1] = height
+
+    x = y + _eps * r_num.normal(size=(_n_pts, _dim))
+    return x
+
+
+def generate_k_cube(_n_pts, _dim, _k=3, _eps=0.1, _seed=None, _rotate=True, _center=True):
+    """
+
+    :param _n_pts:
+    :param _dim:
+    :param _k:
+    :param _eps:
+    :param _seed:
+    :param _rotate:
+    :param _center:
+    :return:
+    """
+    if not (1 <= _k <= _dim):
+        raise ValueError("k must be in range [1, dim]")
+    r_num = _rng(_seed)
+
+    if _center:
+        u = r_num.uniform(low=0.5, high=0.5, size=(_n_pts, _dim))
+    else:
+        u = r_num.uniform(low=0.0, high=1.0, size=(_n_pts, _dim))
+    y = np.zeros((_n_pts, _dim))
+    y[:, :_k] = u
+
+    if _rotate and _dim > 1:
+        r = _ortohnorm_basis(_dim, _dim, r_num)
+        y = y @ r.T
+
+    x = y + _eps * r_num.normal(size=(_n_pts, _dim))
+    return x
