@@ -12,6 +12,8 @@ DIRECTION_BY_STAT = {
     "total_persistence": "lower",
     "tail_count": "lower",
 }
+# CHECK THIS, tail_count might have to be upper
+
 
 GROUP_COLS = ["n_pts", "dim", "filtration"]     # calibration keys
 STAT_COLS  = ["total_persistence", "tail_count"]
@@ -30,7 +32,11 @@ def empirical_pvalue(val, samples, direction):
     """
     samples = np.asarray(samples, dtype=float)
     if direction == "lower":
-        return (1.0 + np.sum(samples <= val)) / (samples.size + 1.0)
+        lt = np.sum(samples < val)
+        eq = np.sum(samples == val)
+        u = np.random.random()
+        return (1.0 + lt + u * eq) / (samples.size + 1.0)
+        #return (1.0 + np.sum(samples <= val)) / (samples.size + 1.0)
     elif direction == "upper":
         return (1.0 + np.sum(samples >= val)) / (samples.size + 1.0)
     else:

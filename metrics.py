@@ -52,6 +52,26 @@ def tail_count(_diagrams_by_dim, _dims, _tau):
     return int(c)
 
 
+def tail_rate(_diagrams_by_dim, _dims, _tau):
+    num = 0
+    den = 0
+    for d in _dims:
+        l = finite_lengths(_diagrams_by_dim.get(d, np.empty((0, 2))))
+        if l.size:
+            den += int(l.size)
+            num += int(np.sum(l > _tau))
+    return float(num / den) if den > 0 else 0.0
+
+
+def tail_excess(_diagrams_by_dim, _dims, _tau):
+    s = 0.0
+    for d in _dims:
+        l = finite_lengths(_diagrams_by_dim.get(d, np.empty((0, 2))))
+        if l.size:
+            s += float(np.sum(np.maximum(l - _tau, 0.0)))
+    return float(s)
+
+
 def choose_dtm_k(n, mass=0.1, min_k=5, max_k=None):
     k = int(np.ceil(mass * n))
     k = max(k, min_k)
@@ -104,12 +124,15 @@ def compute_statistics(_x, _dims, _p, _tau, _knn_est,
     #        "tail_count": tail_count(dgms, _dims, _tau)
     #    }
     vr_res = compute_vr_diagrams(_x, _knn_est)
-    out['vr'] = {'tail_count': tail_count(vr_res, _dims, _tau)}
+    tau_eff = _tau * _knn_est  # scale tau depending on knn to not skew barcode length counts
+    # out['vr'] = {'tail_count': tail_count(vr_res, _dims, tau_eff)}
+    out['vr'] = {'tail_count': tail_excess(vr_res, _dims, tau_eff)}
     out['vr']['total_persistence'] = total_persistence(vr_res, _dims, _p=_p)
 
     dtm_k = choose_dtm_k(_x.shape[0], mass=0.1, min_k=5)
     dtm_max_f = 2.0 * _knn_est
     dtm_res = compute_dtm_vr_diagrams(_x, dtm_max_f, dtm_k)
-    out['dtm'] = {'tail_count': tail_count(dtm_res, _dims, _tau)}
+    # out['dtm'] = {'tail_count': tail_count(dtm_res, _dims, tau_eff)}
+    out['dtm'] = {'tail_count': tail_excess(dtm_res, _dims, tau_eff)}
     out['dtm']['total_persistence'] = total_persistence(dtm_res, _dims, _p=_p)
     return out
