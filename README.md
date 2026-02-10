@@ -73,6 +73,7 @@ where the following are true:
 1) VR-complex 
 2) Cech complex (maybe drop due to computation)
 3) DTM filtration
+4) Witness complex (forgot about this one, revisit Ghrist)
 
 For each of the above, we sweep $\epsilon \in \{0.05, 0.1, 0.2, 0.5\}$,
 **which controls for the strength of the collapse.** 
