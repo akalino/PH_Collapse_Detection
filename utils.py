@@ -9,7 +9,8 @@ from metrics import compute_statistics
 
 def shared_simulation(_generator, _n_pts, _dim,
                       _dims, _p, _tau,
-                      _num_sim, _eps, _seed):
+                      _num_sim, _eps,
+                      _landmark_m=None, _seed=None):
     r_num = np.random.default_rng(_seed)
     rows = []
     for _ in tqdm(range(_num_sim)):

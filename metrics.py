@@ -1,6 +1,6 @@
 import numpy as np
 
-from complex_persistence import compute_dtm_vr_diagrams, compute_vr_diagrams
+from complex_persistence import compute_dtm_vr_diagrams, compute_vr_diagrams  # , compute_witness_diagrams
 
 
 def finite_lengths(_intervals):
@@ -62,7 +62,25 @@ def choose_dtm_k(n, mass=0.1, min_k=5, max_k=None):
     return k
 
 
-def compute_statistics(_x, _dims, _p, _tau, _knn_est):
+def pick_landmarks(_x, _m, _seed=None):
+    """
+    witness complex for scaling.
+
+    :param _x: Point cloud.
+    :param _m: Number of landmarks.
+    :param _seed: Random seed.
+    :return: Sub-sampled point cloud.
+    """
+    n = _x.shape[0]
+    if _m is None or _m <= 0 or _m >= n:
+        return _x
+    rng = np.random.default_rng(_seed)
+    idx = rng.choice(n, _m, replace=False)
+    return _x[idx]
+
+
+def compute_statistics(_x, _dims, _p, _tau, _knn_est,
+                       _landmark_m=None, _landmark_seed=None):
     """
     Runs the two tests from a single persistence diagram.
 
@@ -71,9 +89,20 @@ def compute_statistics(_x, _dims, _p, _tau, _knn_est):
     :param _p:
     :param _tau:
     :param _knn_est:
+    :param _landmark_m:
+    :param _landmark_seed:
     :return:
     """
+    # use_witness = False
+    # _x = pick_landmarks(_x, _landmark_m, _landmark_seed)
     out = {}
+    #if use_witness:
+    #    max_alpha_sq = _knn_est**2
+    #    dgms = compute_witness_diagrams(_x, _landmark_m, max_alpha_sq, max(_dims), _landmark_seed)
+    #    out["witness"] = {
+    #        "total_persistence": total_persistence(dgms, _dims, _p),
+    #        "tail_count": tail_count(dgms, _dims, _tau)
+    #    }
     vr_res = compute_vr_diagrams(_x, _knn_est)
     out['vr'] = {'tail_count': tail_count(vr_res, _dims, _tau)}
     out['vr']['total_persistence'] = total_persistence(vr_res, _dims, _p=_p)

@@ -16,6 +16,9 @@ DIRECTION_BY_STAT = {
 GROUP_COLS = ["n_pts", "dim", "filtration"]     # calibration keys
 STAT_COLS  = ["total_persistence", "tail_count"]
 
+M_TESTS_ANY = len(STAT_COLS) * 2
+ALPHA_BONF = ALPHA / M_TESTS_ANY
+
 
 def empirical_pvalue(val, samples, direction):
     """
@@ -112,8 +115,18 @@ def apply_tests(df, crit_lookup, null_samples, label):
 
             crit, direction = crit_lookup[lk]
             val = float(r[stat])
-            reject = (val <= crit) if direction == "lower" else (val >= crit)
+            #reject = (val <= crit) if direction == "lower" else (val >= crit)
+            #pval = empirical_pvalue(val, null_samples[key_base][stat], direction)
             pval = empirical_pvalue(val, null_samples[key_base][stat], direction)
+            # Minimal robust decision rule for discrete/tied stats
+            # if stat == "tail_count":
+            #     reject = (pval <= ALPHA)
+            # else:
+            #     reject = (val <= crit) if direction == "lower" else (val >= crit)
+            if stat == "tail_count":
+                reject = (pval <= ALPHA_BONF)
+            else:
+                reject = (pval <= ALPHA_BONF)
 
             row_out = {
                 "set": label,
@@ -154,8 +167,8 @@ if __name__ == "__main__":
                     .mean().reset_index().rename(columns={"reject": "rejection_rate"}))
 
     # Power / rejection rates for alternatives
-    if "epsilon" in alt_tested.columns:
-        alt_group = ["point_cloud", "epsilon"] + GROUP_COLS + ["stat"]
+    if "eps" in alt_tested.columns:
+        alt_group = ["point_cloud", "eps"] + GROUP_COLS + ["stat"]
     else:
         alt_group = ["point_cloud"] + GROUP_COLS + ["stat"]
 
