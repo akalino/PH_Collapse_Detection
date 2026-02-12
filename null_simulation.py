@@ -4,7 +4,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from point_clouds import generate_gaussian, generate_noisy_sphere
-from utils import shared_simulation
+from utils import shared_simulation, load_tau_map
 
 
 if __name__ == "__main__":
@@ -12,17 +12,22 @@ if __name__ == "__main__":
     dim_list = [5, 10, 20]
     gauss_benchmarks = []
     sphere_benchmarks = []
-    lm = True
+    lm = False
+    tau_df = load_tau_map()
     for n in np_list:
         for d in dim_list:
             landmark = n / 2 if lm else None
             print('Running null calibration for {} points of dimension {}'.format(n, d))
-            crit_gauss = shared_simulation(generate_gaussian, n, d, [0, 1, 2, 3],
-                                                   0.1, 0.1, 100, 0.05, landmark,17)
+            crit_gauss = shared_simulation(generate_gaussian,
+                                           n, d, [0, 1, 2, 3],
+                                           0.1, 0.1, 100, 0.05, landmark,
+                                           tau_df, "gaussian", 17)
             crit_gauss['point_cloud'] = 'gaussian'
             gauss_benchmarks.append(crit_gauss)
             crit_sphere = shared_simulation(generate_noisy_sphere, n, d, [0, 1, 2, 3],
-                                                    0.1, 0.1, 100, 0.05, landmark,17)
+                                                    0.1, 0.1,
+                                            100, 0.05, landmark,
+                                            tau_df, "gaussian",17)
             crit_sphere['point_cloud'] = 'noisy_sphere'
             sphere_benchmarks.append(crit_sphere)
     out = pd.concat(gauss_benchmarks + sphere_benchmarks, axis=0)
