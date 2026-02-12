@@ -10,7 +10,7 @@ ALPHA = 0.05
 # One-sided direction per statistic
 DIRECTION_BY_STAT = {
     "total_persistence": "lower",
-    "tail_count": "lower",
+    "tail_count": "upper",
 }
 # CHECK THIS, tail_count might have to be upper
 
