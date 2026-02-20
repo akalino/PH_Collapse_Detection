@@ -30,7 +30,7 @@ def debug_simplex_tree(st, label=""):
     print(f"[{label}] filtration min/max =", min(fvals), max(fvals))
 
 
-def compute_vr_diagrams(_points, _max_edge_length, _max_dim=3, _sparse=None):
+def compute_vr_diagrams(_points, _max_edge_length, _max_dim=2, _sparse=None):
     """
 
     :param _points:
@@ -44,7 +44,7 @@ def compute_vr_diagrams(_points, _max_edge_length, _max_dim=3, _sparse=None):
     return _diag_by_dim(st, _max_dim)
 
 
-def compute_dtm_vr_diagrams(_points, _max_filtration=100, _k=10, _q=2, _max_dim=3):
+def compute_dtm_vr_diagrams(_points, _max_filtration=100, _k=10, _q=2, _max_dim=2):
     """
 
     :param _points:

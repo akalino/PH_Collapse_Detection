@@ -7,7 +7,7 @@ from tqdm import tqdm
 from metrics import compute_statistics
 
 
-def load_tau_map(path="comparisons/tau_map.csv"):
+def load_tau_map(path="calibration/tau_map.csv"):
     df = pd.read_csv(path)
     return df
 
