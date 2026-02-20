@@ -32,12 +32,13 @@ def concat_lengths_by_dim(_diagrams_by_dim, _dims):
     return np.concatenate(all_len) if all_len else np.array([])
 
 
-def compute_lengths(_x, _dims, _knn_est):
-    vr_res = compute_vr_diagrams(_x, _knn_est)
+def compute_lengths(_x, _dims, _knn_est, _sparse=None):
+    max_dim = int(max(_dims)) if len(_dims) else 0
+    vr_res = compute_vr_diagrams(_x, _knn_est, _max_dim=max_dim, _sparse=_sparse)
 
     dtm_k = choose_dtm_k(_x.shape[0], mass=0.1, min_k=5)
     dtm_max_f = 2.0 * _knn_est
-    dtm_res = compute_dtm_vr_diagrams(_x, dtm_max_f, dtm_k)
+    dtm_res = compute_dtm_vr_diagrams(_x, dtm_max_f, dtm_k, _max_dim=max_dim)
 
     return {
         "vr": concat_lengths_by_dim(vr_res, _dims),
@@ -121,6 +122,99 @@ def tail_mean_excess(_diagrams_by_dim, _dims, _tau, _eps=1e-12):
             num_excess += int(np.sum(mask))
             sum_excess += float(np.sum(excess[mask]))
     return float(sum_excess / (num_excess + _eps))
+
+
+import numpy as np
+
+
+def betti_curve(_diagrams_by_dim, _dims, _r_grid):
+    """
+    Compute Betti curve beta(r) pooled across selected homology dimensions.
+
+    beta(r) = #{(b,d): b <= r < d} over finite bars, summed over dims in _dims.
+
+    :param _diagrams_by_dim:
+    :param _dims:
+    :param _r_grid:
+    :return: np.ndarray shape (len(_r_grid),)
+    """
+    r = np.asarray(_r_grid, dtype=float)
+    if r.ndim != 1:
+        raise ValueError("r_grid must be 1D")
+    if r.size == 0:
+        return np.zeros((0,), dtype=float)
+
+    beta = np.zeros(r.shape, dtype=float)
+
+    for d in _dims:
+        ints = _diagrams_by_dim.get(d, np.empty((0, 2)))
+        if ints.size == 0:
+            continue
+        births = ints[:, 0]
+        deaths = ints[:, 1]
+        finite = np.isfinite(deaths)
+        if not np.any(finite):
+            continue
+        b = births[finite]
+        e = deaths[finite]
+        if b.size == 0:
+            continue
+        active = (b[:, None] <= r[None, :]) & (r[None, :] < e[:, None])
+        beta += np.sum(active, axis=0).astype(float)
+
+    return beta
+
+
+def betti_curve_auc(_diagrams_by_dim, _dims, _r_grid):
+    """
+    Area under Betti curve (AUC) using trapezoid rule, pooled across dims.
+
+    :param _diagrams_by_dim:
+    :param _dims:
+    :param _r_grid:
+    :return: float
+    """
+    r = np.asarray(_r_grid, dtype=float)
+    if r.size < 2:
+        return 0.0
+    beta = betti_curve(_diagrams_by_dim, _dims, r)
+    order = np.argsort(r)
+    r_sorted = r[order]
+    beta_sorted = beta[order]
+    return float(np.trapz(beta_sorted, r_sorted))
+
+
+def betti_curve_peak(_diagrams_by_dim, _dims, _r_grid):
+    """
+    Peak (max) of Betti curve, pooled across dims.
+
+    :param _diagrams_by_dim:
+    :param _dims:
+    :param _r_grid:
+    :return: float
+    """
+    r = np.asarray(_r_grid, dtype=float)
+    if r.size == 0:
+        return 0.0
+    beta = betti_curve(_diagrams_by_dim, _dims, r)
+    return float(np.max(beta)) if beta.size else 0.0
+
+
+def betti_curve_collapse(_diagrams_by_dim, _dims, _r_grid):
+    """
+    Minimal "Betti curve collapse" feature set:
+      - auc: area under beta(r)
+      - peak: max beta(r)
+
+    :param _diagrams_by_dim:
+    :param _dims:
+    :param _r_grid:
+    :return: dict
+    """
+    return {
+        "betti_auc": betti_curve_auc(_diagrams_by_dim, _dims, _r_grid),
+        "betti_peak": betti_curve_peak(_diagrams_by_dim, _dims, _r_grid),
+    }
 
 
 def choose_dtm_k(n, mass=0.1, min_k=5, max_k=None):

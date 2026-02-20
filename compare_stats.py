@@ -10,13 +10,13 @@ ALPHA = 0.05
 # One-sided direction per statistic
 DIRECTION_BY_STAT = {
     "total_persistence": "lower",
-    "tail_count": "upper",
+    "mean_excess_tail": "upper", # fix me to mean_excess_tail
 }
-# CHECK THIS, tail_count might have to be upper
+# CHECK THIS, mean_excess_tail might have to be upper
 
 
 GROUP_COLS = ["n_pts", "dim", "filtration"]     # calibration keys
-STAT_COLS  = ["total_persistence", "tail_count"]
+STAT_COLS  = ["total_persistence", "mean_excess_tail"]
 
 M_TESTS_ANY = len(STAT_COLS) * 2
 ALPHA_BONF = ALPHA / M_TESTS_ANY
@@ -125,11 +125,11 @@ def apply_tests(df, crit_lookup, null_samples, label):
             #pval = empirical_pvalue(val, null_samples[key_base][stat], direction)
             pval = empirical_pvalue(val, null_samples[key_base][stat], direction)
             # Minimal robust decision rule for discrete/tied stats
-            # if stat == "tail_count":
+            # if stat == "mean_excess_tail":
             #     reject = (pval <= ALPHA)
             # else:
             #     reject = (val <= crit) if direction == "lower" else (val >= crit)
-            if stat == "tail_count":
+            if stat == "mean_excess_tail":
                 reject = (pval <= ALPHA_BONF)
             else:
                 reject = (pval <= ALPHA_BONF)

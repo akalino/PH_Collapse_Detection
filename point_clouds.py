@@ -1,6 +1,7 @@
-# Code for generating Gaussians.
+# Code for generating all point clouds (null/alt).
 import numpy as np
 
+# Helper functions
 
 def _rng(_seed=None):
     """
@@ -40,6 +41,8 @@ def _add_isotropic_noise(_y, _sigma, _seed=None):
     return _y + _sigma * r_num.normal(size=_y.shape)
 
 
+# Null baselines
+
 def generate_gaussian(_n_pts, _dim, _seed=None):
     """
     Generates Gaussian distribution with given dimension.
@@ -72,6 +75,102 @@ def generate_noisy_sphere(_n_pts, _dim, _noise_sig=0.3, _radius=1.0, _seed=None)
     x = _add_isotropic_noise(y, _noise_sig, _seed)
     return x
 
+
+def generate_elliptical_gaussian(_n_pts, _dim, _k=3, _eta=0.1, _scale=1.0,
+                                 _seed=None, _rotate=True):
+    """
+    :param _n_pts: Number of points.
+    :param _dim: Ambient dimension.
+    :param _k: Number of high-variance directions.
+    :param _eta: Shrink factor for remaining directions in (0,1].
+    :param _scale: Global scale factor (std dev in top-k directions).
+    :param _seed: RNG seed or np.random.Generator.
+    :param _rotate: If True, apply a random orthonormal rotation to avoid axis alignment.
+    """
+    r_num = _rng(_seed)
+    scales = np.full(_dim, _scale, dtype=float)
+    scales[_k:] = _scale * _eta
+    x = r_num.normal(size=(_n_pts, _dim))
+    if _rotate and _dim > 1:
+        u = _ortohnorm_basis(_dim, _dim, r_num)
+        x = x @ u.T
+    return x
+
+
+def generate_uniform_ball(_n_pts, _dim, _radius=1.0, _noise_sig=0.0, _seed=None):
+
+    r_num = _rng(_seed)
+    z = r_num.normal(size=(_n_pts, _dim))
+    z_norm = np.linalg.norm(z, axis=1, keepdims=True)
+    z_norm = np.maximum(z_norm, 1e-12)
+    u = z / z_norm
+
+    rad = _radius * r_num.uniform(size=(_n_pts, 1)) ** (1.0 / _dim)
+    x = rad * u
+
+    if _noise_sig > 0:
+        x = _add_isotropic_noise(x, _noise_sig, r_num)
+    return x
+
+# Nulls that match neural network initializations
+
+def generate_xavier_normal(_n_pts, _dim, _scale="unit_norm",
+                           _f_in=0.0, _f_out=1.0, _seed=17):
+    """
+    Var[Unif(-a,a)] = a^2/3 = sigma2
+    """
+    r_num = _rng(_seed)
+    if _scale == "unit_norm":
+        sigma2 = 1.0 / float(_dim)
+    elif _scale == "glorot":
+        sigma2 = 2.0 / float(_f_in + _f_out)
+    else:
+        raise ValueError("scale_mode must be one of {'unit_norm','glorot'}")
+    a = np.sqrt(3.0 * sigma2)
+    x = r_num.uniform(low=-a, high=a, size=(_n_pts, _dim))
+    return x
+
+
+def generate_layer_mixes(_n_pts, _dim, _sigmas=(0.5, 1.0, 1.5),
+                         _weights=None, _base="gaussian",
+                         _scale="unit_norm", _seed=None):
+    """
+    In early training embeddings are mostly isotropic but have norms based on token types or contexts.
+    Keep the covariance isotropic but introduce radial structure.
+    """
+    r_num = _rng(_seed)
+    k = len(_sigmas)
+    if _weights is None:
+        w = np.full(k, 1.0 / k, dtype=float)
+    else:
+        w = np.asarray(_weights, dtype=float)
+
+    if _scale == "unit_norm":
+        base_std = 1.0 / np.sqrt(float(_dim))
+    elif _scale == "none":
+        base_std = 1.0
+    components = r_num.choice(k, size=_n_pts, p=w)
+
+    x = np.empty((_n_pts, _dim), dtype=float)
+    if _base == "gaussian":
+        for j in range(k):
+            idx = np.where(components == j)[0]
+            if idx.size == 0:
+                continue
+            std = base_std * float(_sigmas[j])
+            x[idx, :] = r_num.normal(loc=0.0, scale=std, size=(idx.size, _dim))
+
+    elif _base == "xavier_uniform":
+        for j in range(k):
+            idx = np.where(components == j)[0]
+            if idx.size == 0:
+                continue
+            std = base_std * float(_sigmas[j])
+            a = np.sqrt(3.0) * std
+            x[idx, :] = r_num.uniform(low=-a, high=a, size=(idx.size, _dim))
+    return x
+
+# Alternate / collapse tests
 
 def generate_collapsed_linear(_n_pts, _dim, _k=3, _eps=0.1, _spread=1.0, _seed=None):
     """
@@ -262,9 +361,9 @@ def generate_k_cube(_n_pts, _dim, _k=3, _eps=0.1, _seed=None, _rotate=True, _cen
     r_num = _rng(_seed)
 
     if _center:
-        u = r_num.uniform(low=0.5, high=0.5, size=(_n_pts, _dim))
+        u = r_num.uniform(low=0.5, high=0.5, size=(_n_pts, _k))
     else:
-        u = r_num.uniform(low=0.0, high=1.0, size=(_n_pts, _dim))
+        u = r_num.uniform(low=0.0, high=1.0, size=(_n_pts, _k))
     y = np.zeros((_n_pts, _dim))
     y[:, :_k] = u
 

@@ -1,0 +1,1 @@
+# TODO: aggregate all global variables here for consistency
