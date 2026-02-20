@@ -14,16 +14,16 @@ from utils import load_tau_map, shared_simulation
 
 
 def wrap(fn, **fixed_kwargs):
-    def gen(n_pts, dim, seed=None):
-        return fn(n_pts, dim, _seed=seed, **fixed_kwargs)
+    def gen(n_pts, dim, _seed=None):
+        return fn(n_pts, dim, _seed=_seed, **fixed_kwargs)
     return gen
 
 
 def elliptical_gen(eta, rotate=True, scale=1.0):
-    def gen(n_pts, dim, seed=None):
+    def gen(n_pts, dim, _seed=None):
         k = max(1, min(3, int(dim)))
         return generate_elliptical_gaussian(
-            n_pts, dim, _k=k, _eta=eta, _scale=scale, _rotate=rotate, _seed=seed
+            n_pts, dim, _k=k, _eta=eta, _scale=scale, _rotate=rotate, _seed=_seed
         )
     return gen
 

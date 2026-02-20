@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
+from complex_persistence import compute_dtm_vr_diagrams, compute_vr_diagrams
+from metrics import compute_lengths, concat_lengths_by_dim
 from point_clouds import (
     generate_gaussian,
     generate_noisy_sphere,
@@ -15,13 +17,13 @@ from point_clouds import (
     generate_layer_mixes,
 )
 from utils import knn_persistence_param_estimation
-from metrics import compute_lengths
+
 
 
 TAU_Q = 0.95
 N_SIM = 100
 
-KNN_K = 10
+KNN_K = 20
 KNN_Q = 0.95
 KNN_B1 = 1.05
 KNN_METRIC = "euclidean"
@@ -113,7 +115,7 @@ def _cache_path(name, n, d, seed):
 
 def _atomic_save_npz(path, **arrays):
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = f"{path}.tmp.{os.getpid()}.{int(time.time()*1000)}"
+    tmp = f"{path}.tmp.{os.getpid()}.{int(time.time()*1000)}.npz"
     np.savez_compressed(tmp, **arrays)
     os.replace(tmp, path)
 
@@ -132,13 +134,20 @@ def run_one_seed(task):
 
     cut = knn_persistence_param_estimation(x, KNN_K, KNN_Q, KNN_B1, KNN_METRIC)
 
-    # keep your sparse setting from the current tau_parallel (cheap win, no landmarks)
-    l = compute_lengths(x, DIMS, cut, _sparse=cut * 0.5)
+    max_dim = 2
+    max_edge = float(2.0 * cut)  # inflate so we actually get edges/merges
+    dtm_max_f = float(4.0 * cut)  # match scale inflation for dtm filtration
+    dtm_k = 10  # or reuse your choose_dtm_k if you want
 
-    vr = l.get("vr", np.array([], dtype=float))
-    dtm = l.get("dtm", np.array([], dtype=float))
+    vr_dgms = compute_vr_diagrams(x, max_edge, _max_dim=max_dim, _sparse=None)
+    dtm_dgms = compute_dtm_vr_diagrams(x, dtm_max_f, _k=dtm_k, _max_dim=max_dim)
 
-    _atomic_save_npz(out_path, vr=vr, dtm=dtm)
+    vr = concat_lengths_by_dim(vr_dgms, DIMS)
+    dtm = concat_lengths_by_dim(dtm_dgms, DIMS)
+    if vr.size == 0 and dtm.size == 0:
+        print(f"[warn] empty lengths: {name} n={n} d={d} seed={seed} cut={cut:.4g}")
+
+    _atomic_save_npz(out_path, vr=vr, dtm=dtm, cut=np.array([cut], dtype=float))
     return out_path
 
 
@@ -151,6 +160,8 @@ def aggregate_group(name, n, d, seeds):
         if not os.path.exists(p):
             continue
         z = np.load(p, allow_pickle=False)
+        if z is None:
+            print(f"[warn] broken cached npz files")
         vr = z["vr"]
         dtm = z["dtm"]
         if getattr(vr, "size", 0):
