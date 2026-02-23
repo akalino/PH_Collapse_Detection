@@ -2,8 +2,6 @@ import numpy as np
 import pandas as pd
 import time
 
-from tqdm import tqdm
-
 from metrics import compute_statistics
 
 
@@ -40,7 +38,7 @@ def shared_simulation(_generator, _n_pts, _dim,
                       _seed=None):
     r_num = np.random.default_rng(_seed)
     rows = []
-    for _ in tqdm(range(_num_sim)):
+    for _ in range(_num_sim):
         start = time.time()
         s = int(r_num.integers(0, 2 ** 20 - 1))
         try:
