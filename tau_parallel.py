@@ -182,34 +182,40 @@ def aggregate_group(name, n, d, seeds):
 
 
 if __name__ == "__main__":
-    os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
-    os.makedirs(CACHE_ROOT, exist_ok=True)
 
-    gens = build_null_suite()
-    names = list(gens.keys())
+    try:
+        df = pd.read_csv(OUT_PATH)
+        print(">> [CALIBRATION] tau_map already exists")
+    except FileNotFoundError:
+        print(">> [CALIBRATION] tau_map missing, re-calibrating")
+        os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
+        os.makedirs(CACHE_ROOT, exist_ok=True)
 
-    seed_map = {}
-    for name in names:
-        for n in N_LIST:
-            for d in D_LIST:
-                base_seed = abs(hash((name, int(n), int(d), "tau"))) % (2**31 - 1)
-                seeds = _seed_stream(base_seed, N_SIM).tolist()
-                seed_map[(name, n, d)] = seeds
+        gens = build_null_suite()
+        names = list(gens.keys())
 
-    tasks = []
-    for (name, n, d), seeds in seed_map.items():
-        for s in seeds:
-            tasks.append((name, n, d, int(s)))
+        seed_map = {}
+        for name in names:
+            for n in N_LIST:
+                for d in D_LIST:
+                    base_seed = abs(hash((name, int(n), int(d), "tau"))) % (2**31 - 1)
+                    seeds = _seed_stream(base_seed, N_SIM).tolist()
+                    seed_map[(name, n, d)] = seeds
 
-    with ProcessPoolExecutor(max_workers=MAX_WORKERS, initializer=_init_worker) as ex:
-        futs = [ex.submit(run_one_seed, t) for t in tasks]
-        for _ in tqdm(as_completed(futs), total=len(futs)):
-            pass
+        tasks = []
+        for (name, n, d), seeds in seed_map.items():
+            for s in seeds:
+                tasks.append((name, n, d, int(s)))
 
-    rows = []
-    for (name, n, d), seeds in seed_map.items():
-        rows.extend(aggregate_group(name, n, d, seeds))
+        with ProcessPoolExecutor(max_workers=MAX_WORKERS, initializer=_init_worker) as ex:
+            futs = [ex.submit(run_one_seed, t) for t in tasks]
+            for _ in tqdm(as_completed(futs), total=len(futs)):
+                pass
 
-    df = pd.DataFrame(rows)
-    df.to_csv(OUT_PATH, index=False)
-    print(f"Wrote {OUT_PATH} ({len(df)} rows)")
+        rows = []
+        for (name, n, d), seeds in seed_map.items():
+            rows.extend(aggregate_group(name, n, d, seeds))
+
+        df = pd.DataFrame(rows)
+        df.to_csv(OUT_PATH, index=False)
+        print(f"Wrote {OUT_PATH} ({len(df)} rows)")
