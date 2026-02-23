@@ -1,4 +1,4 @@
-# PH_Collapse_Detection
+# WIP: PH Collapse Detection
 
 #### Goal
 Use persistent homology to detect degenerating covariance / 
