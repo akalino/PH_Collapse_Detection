@@ -125,5 +125,4 @@ distributional collapse (deviation from full-dimension null models).
 
 ### How to run
 
-1) Generate point clouds using `synthetic_data/point_clouds.py`. Relevant hyperparameters can be found in the YAML configs.
-2) 
+`./run_pipeline.sh`
