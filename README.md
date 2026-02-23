@@ -85,6 +85,36 @@ the persistence-based test rejects the null more often.
 
 #### Test Statistics Computed
 
+##### Calibration 
+
+There are two calibrations that need to be completed.
+
+1. The first is to calibrate $\tau$, the appropriate scale to build
+the VR / DTM filtrations to keep persistence computations
+at comparable resolutions across settings.
+We calibrate $\tau$ (which generates tau_map.csv) according to:
+- the point clouds included in the null class
+- the number of points and dimension
+- the type of filtration
+
+Later, the tau_map.csv is used as a lookup in simulations and is used to set:
+- the VR max_edge_length (radius cap)
+- the DTM max_f (scale cap)
+
+2. We then can calibrate the statistical tests so that Type I error is controlled
+(or FWER after correction)
+For each null distribution (p-values) are computed for the PH statistics
+- Total Persistence (TP)
+- Mean Tail Excess (MTE)
+This is accomplished using null_simulation. 
+
+After these steps of calibration, we can run simulations of the 
+three main classes of alternatives.
+This is accomplished through alt_parallel.
+We can then run compare_stats to complete the initial pipeline,
+followed by generating power curves using power_vs_eps.
+
+
 
 #### Preliminary Results
 
