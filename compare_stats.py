@@ -9,7 +9,7 @@ ALPHA = 0.05
 
 # One-sided direction per statistic
 DIRECTION_BY_STAT = {
-    "total_persistence": "lower",
+    "total_persistence": "upper",
     "mean_excess_tail": "upper", # fix me to mean_excess_tail
 }
 # CHECK THIS, mean_excess_tail might have to be upper
@@ -159,7 +159,9 @@ def apply_tests(df, crit_lookup, null_samples, label):
 
 if __name__ == "__main__":
     null_df = pd.read_csv(NULL_PATH)
+    null_df = null_df.rename(columns={'tail_count': 'mean_excess_tail'})
     alt_df  = pd.read_csv(ALT_PATH)
+    alt_df = alt_df.rename(columns={'tail_count': 'mean_excess_tail'})
 
     crit_df, crit_lookup, null_samples = calibrate(null_df, alpha=ALPHA)
     null_tested = apply_tests(null_df, crit_lookup, null_samples, label="null")

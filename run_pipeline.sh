@@ -7,17 +7,17 @@ cd "$(dirname "$0")"
 echo ">> Checking output directories"
 mkdir -p calibration comparisons cov_id powers simulations
 
-echo ">> Clearing past run csvs"
-rm -f comparisons/*.csv cov_id/*.csv powers/*.csv simulations/*.csv calibration/*.csv
+echo ">> Clearing past run csvs, keeping calibration"
+rm -f comparisons/*.csv cov_id/*.csv powers/*.csv simulations/*.csv
 
-echo ">> Step 1/6: tau calibration"
-python tau_calibration.py
+echo ">> Step 1/6: tau calibration (map pre-computed)"
+python tau_parallel.py
 
 echo ">> Step 2/6: null simulation"
-python null_simulation.py
+python null_parallel.py
 
 echo ">> Step 3/6: alt simulation"
-python alt_simulation.py
+python alt_parallel.py
 
 echo ">> Step 4/6: compare statistics"
 python compare_stats.py
