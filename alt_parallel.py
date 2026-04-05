@@ -4,7 +4,7 @@ import pandas as pd
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
-from config_utils import load_config, resolve_output
+from config_utils import load_config, resolve_output, stable_seed
 from point_clouds import (
     generate_collapsed_linear, generate_spiked_gaussian,
     generate_collapsed_swiss, generate_collapsed_torus, generate_paraboloid_graph,
@@ -28,14 +28,12 @@ GENS = {
 def run_one(_task):
     n, d, e, name = _task
     tau_df = load_tau_map()
-    lm = False
-    landmark = n / 2 if lm else None
 
-    seed = abs(hash((n, d, e, name))) % (2**31 - 1)
+    seed = BASE_SEED
 
-    _df = shared_simulation(GENS[name], n, d, [0,1,2],
-                           0.1, 0.1, 100,
-                            e, landmark, tau_df, "gaussian", seed)
+    _df = shared_simulation(GENS[name], n, d, HOM_DIMS,
+                            ALPHA, P, N_SIM,
+                            e, LANDMARK, tau_df, TAU_REF, seed)
     _df['point_cloud'] = name
     return _df
 
@@ -49,6 +47,13 @@ if __name__ == '__main__':
     shared = cfg["shared"]
     stage = cfg["alt_parallel"]
     run = cfg["run"]
+    BASE_SEED = run["base_seed"]
+    HOM_DIMS = shared["hom_dims"]
+    ALPHA = shared["alpha"]
+    P = shared["p"]
+    N_SIM = shared["n_sim"]
+    LANDMARK = shared["landmark"]
+    TAU_REF = shared["tau_reference_family"]
 
     np_list = shared["n_list"]
     dim_list = shared["d_list"]

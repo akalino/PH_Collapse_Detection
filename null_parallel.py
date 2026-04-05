@@ -3,7 +3,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import numpy as np
 import pandas as pd
 
-from config_utils import load_config, resolve_output
+from config_utils import load_config, resolve_output, stable_seed
 from point_clouds import (
     generate_gaussian,
     generate_noisy_sphere,
@@ -76,19 +76,19 @@ def run_one(task):
     landmark = n / 2 if lm else None
     gens = build_gens()
     gen = gens[name]
-    seed = abs(hash((n, d, float(e), name))) % (2**31 - 1)
+    seed = BASE_SEED
     df = shared_simulation(
         gen,
         n,
         d,
-        [0, 1, 2],
-        0.1,
-        0.1,
-        100,
+        HOM_DIMS,
+        ALPHA,
+        P,
+        N_SIM,
         e,
-        landmark,
+        LANDMARK,
         tau_df,
-        "gaussian",
+        TAU_REF,
         seed,
     )
     df["point_cloud"] = name
@@ -104,6 +104,13 @@ if __name__ == "__main__":
     shared = cfg["shared"]
     stage = cfg["null_parallel"]
     run = cfg["run"]
+    BASE_SEED = run["base_seed"]
+    HOM_DIMS = shared["hom_dims"]
+    ALPHA = shared["alpha"]
+    P = shared["p"]
+    N_SIM = shared["n_sim"]
+    LANDMARK = shared["landmark"]
+    TAU_REF = shared["tau_reference_family"]
 
     np_list = shared["n_list"]
     dim_list = shared["d_list"]
