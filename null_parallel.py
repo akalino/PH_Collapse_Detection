@@ -1,7 +1,9 @@
+import argparse
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import numpy as np
 import pandas as pd
 
+from config_utils import load_config, resolve_output
 from point_clouds import (
     generate_gaussian,
     generate_noisy_sphere,
@@ -94,12 +96,26 @@ def run_one(task):
 
 
 if __name__ == "__main__":
-    np_list = [10, 50]
-    dim_list = [5, 10, 20]
-    eps_list = [0.05, 0.1, 0.2, 0.5, 1.0, 1.5, 2.0]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", required=True)
+    args = parser.parse_args()
+    cfg = load_config(args.config)
+    
+    shared = cfg["shared"]
+    stage = cfg["null_parallel"]
+    run = cfg["run"]
 
+    np_list = shared["n_list"]
+    dim_list = shared["d_list"]
+    eps_list = shared["eps_list"]
+    out_path = resolve_output(cfg, stage["out_path"])
+    max_workers = run["max_workers"]
+    
     gens = build_gens()
     names = list(gens.keys())
+    missing = [name for name in names if name not in gens]
+    if missing:
+        raise ValueError(f"Unknown families in config: {missing}")
     tasks = [(n, d, e, name) for n in np_list for d in dim_list for e in eps_list for name in names]
 
     rows = []
@@ -109,4 +125,4 @@ if __name__ == "__main__":
             rows.append(f.result())
 
     out = pd.concat(rows, axis=0)
-    out.to_csv("simulations/null_simulation.csv", index=False)
+    out.to_csv(out_path, index=False)

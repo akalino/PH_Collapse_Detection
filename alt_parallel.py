@@ -1,8 +1,10 @@
+import argparse
 import numpy as np
 import pandas as pd
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
+from config_utils import load_config, resolve_output
 from point_clouds import (
     generate_collapsed_linear, generate_spiked_gaussian,
     generate_collapsed_swiss, generate_collapsed_torus, generate_paraboloid_graph,
@@ -39,10 +41,25 @@ def run_one(_task):
 
 
 if __name__ == '__main__':
-    np_list = [10, 50]
-    dim_list = [5, 10, 20]
-    eps = [0.05, 0.1, 0.2, 0.5, 1.0, 1.5, 2.0]
-    names = list(GENS.keys())
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", required=True)
+    args = parser.parse_args()
+    cfg = load_config(args.config)
+
+    shared = cfg["shared"]
+    stage = cfg["alt_parallel"]
+    run = cfg["run"]
+
+    np_list = shared["n_list"]
+    dim_list = shared["d_list"]
+    eps = shared["eps_list"]
+    out_path = resolve_output(cfg, stage["out_path"])
+    max_workers = run["max_workers"]
+    
+    names = stage["families"]
+    missing = [name for name in names if name not in GENS]
+    if missing:
+        raise ValueError(f"Unknown families in config: {missing}")
     tasks = [(n, d, e, name) for n in np_list for d in dim_list for e in eps for name in names]
 
     out_dfs = []
