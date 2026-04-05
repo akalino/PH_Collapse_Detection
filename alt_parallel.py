@@ -63,7 +63,7 @@ if __name__ == '__main__':
     tasks = [(n, d, e, name) for n in np_list for d in dim_list for e in eps for name in names]
 
     out_dfs = []
-    with ProcessPoolExecutor(max_workers=4) as executor:
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = [executor.submit(run_one, t) for t in tasks]
         for f in as_completed(futures):
             try:
@@ -72,4 +72,4 @@ if __name__ == '__main__':
                 print("Task failed:", ex)
 
     out = pd.concat(out_dfs, axis=0)
-    out.to_csv("simulations/alt_simulation.csv", index=False)
+    out.to_csv(out_path, index=False)

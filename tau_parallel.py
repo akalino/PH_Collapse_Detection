@@ -186,7 +186,7 @@ if __name__ == "__main__":
 
     N_LIST = shared["n_list"]
     D_LIST = shared["d_list"]
-    DIMS = shared["dims"]
+    DIMS = shared["hom_dims"]
     OUT_PATH = resolve_output(cfg, stage["out_path"])
     CACHE_ROOT = resolve_output(cfg, stage["cache_root"])
     MAX_WORKERS = run["max_workers"]
@@ -200,7 +200,7 @@ if __name__ == "__main__":
         os.makedirs(CACHE_ROOT, exist_ok=True)
 
         gens = build_null_suite()
-        names = list(gens.keys())
+        names = cfg["tau_parallel"]["families"]
 
         seed_map = {}
         for name in names:

@@ -111,15 +111,15 @@ if __name__ == "__main__":
     out_path = resolve_output(cfg, stage["out_path"])
     max_workers = run["max_workers"]
     
-    gens = build_gens()
-    names = list(gens.keys())
-    missing = [name for name in names if name not in gens]
+    names = stage["families"]
+    GENS = build_gens()
+    missing = [name for name in names if name not in GENS]
     if missing:
         raise ValueError(f"Unknown families in config: {missing}")
     tasks = [(n, d, e, name) for n in np_list for d in dim_list for e in eps_list for name in names]
 
     rows = []
-    with ProcessPoolExecutor() as ex:
+    with ProcessPoolExecutor(max_workers=max_workers) as ex:
         futs = [ex.submit(run_one, t) for t in tasks]
         for f in as_completed(futs):
             rows.append(f.result())
