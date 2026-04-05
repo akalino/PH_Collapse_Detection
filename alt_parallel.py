@@ -32,7 +32,7 @@ def run_one(_task):
     seed = BASE_SEED
 
     _df = shared_simulation(GENS[name], n, d, HOM_DIMS,
-                            ALPHA, P, N_SIM,
+                            P, ALPHA, N_SIM,
                             e, LANDMARK, tau_df, TAU_REF, seed)
     _df['point_cloud'] = name
     return _df

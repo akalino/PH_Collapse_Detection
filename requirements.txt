@@ -3,3 +3,4 @@ pandas==2.2.2
 matplotlib==3.8.4
 gudhi==3.10.1
 tqdm==4.66.5
+scikit-dimension

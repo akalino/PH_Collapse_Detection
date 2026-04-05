@@ -1,44 +1,45 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# run dir
-cd "$(dirname "$0")"
+CONFIG_PATH="${CONFIG_PATH:-config.trial.json}"
 
-echo ">> [SETUP] Checking output directories"
-mkdir -p calibration comparisons cov_id powers simulations
+if [[ ! -f "${CONFIG_PATH}" ]]; then
+  echo "[ERROR] Config file not found: ${CONFIG_PATH}" >&2
+  exit 1
+fi
 
-echo ">> [SETUP] Clearing past run csvs, keeping calibration"
-rm -f comparisons/*.csv cov_id/*.csv powers/*.csv simulations/*.csv results/*.csv
+echo "[INFO] Using config: ${CONFIG_PATH}"
 
-echo ">> [SIMULATE] Step 1/6: tau calibration (map pre-computed)"
-python tau_parallel.py
+run_stage() {
+  local stage_name="$1"
+  shift
+  echo "[INFO] Starting ${stage_name}..."
+  "$@"
+  echo "[INFO] Finished ${stage_name}"
+}
 
-echo ">> [SIMULATE] Step 2/6: null simulation"
-python null_parallel.py
+run_stage "tau calibration" \
+  python tau_parallel.py --config "${CONFIG_PATH}"
 
-echo ">> [SIMULATE] Step 3/6: alt simulation"
-python alt_parallel.py
+run_stage "null simulations" \
+  python null_parallel.py --config "${CONFIG_PATH}"
 
-echo ">> [SIMULATE] Step 4/6: compare statistics"
-python compare_stats.py
+run_stage "alternative simulations" \
+  python alt_parallel.py --config "${CONFIG_PATH}"
 
-echo ">> [SIMULATE] Step 5/6: spectral metrics"
-python cov_id_metrics.py
+run_stage "statistic comparison" \
+  python compare_stats.py --config "${CONFIG_PATH}"
 
-echo ">> [SIMULATE] Step 6/6: power curves"
-python power_vs_eps.py
+run_stage "covariance / intrinsic-dimension metrics" \
+  python cov_id_metrics.py --config "${CONFIG_PATH}"
 
-echo ">> Complete, tables and plots can now be generated."
+run_stage "power aggregation" \
+  python power_vs_eps.py --config "${CONFIG_PATH}"
 
-echo ">> [ASSETS] moving result csvs to single dir"
-mkdir -p results
+run_stage "table generation" \
+  python gen_tables.py --config "${CONFIG_PATH}"
 
-cp calibration/*.csv results/
-cp comparisons/*.csv results/
-cp cov_id/*.csv results/
-cp powers/*.csv results/
-cp simulations/*.csv results/
+run_stage "plot generation" \
+  python gen_plots.py --config "${CONFIG_PATH}"
 
-echo ">> [ASSETS] generating paper assets"
-python gen_tables.py --in results/ --out assets/
-python gen_plots.py --in results/ --out assets/
+echo "[INFO] Pipeline completed successfully."
