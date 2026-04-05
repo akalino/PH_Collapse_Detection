@@ -1,4 +1,6 @@
 import argparse
+import os
+
 import numpy as np
 import pandas as pd
 
@@ -18,7 +20,7 @@ GENS = {
     "spiked_gaussian": generate_spiked_gaussian,
     "swiss": generate_collapsed_swiss,
     "torus": generate_collapsed_torus,
-    "paraboloid": generate_paraboloid_graph,
+    "paraboloid_graph": generate_paraboloid_graph,
     "contaminated_kplane": generate_contaminated_kplane,
     "contaminated_sphere": generate_noisy_sphere,
     "contaminated_kcube": generate_k_cube
@@ -28,7 +30,7 @@ GENS = {
 def run_one(_task):
     n, d, e, name = _task
 
-    seed = BASE_SEED
+    seed = stable_seed(BASE_SEED, "alt", name, n, d, e)
 
     _df = shared_simulation(GENS[name], n, d, HOM_DIMS,
                             P, ALPHA, N_SIM,
@@ -77,4 +79,5 @@ if __name__ == '__main__':
                 print("Task failed:", ex)
 
     out = pd.concat(out_dfs, axis=0)
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
     out.to_csv(out_path, index=False)

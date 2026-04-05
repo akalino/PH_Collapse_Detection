@@ -1,4 +1,6 @@
 import argparse
+import os
+
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import numpy as np
 import pandas as pd
@@ -73,7 +75,7 @@ def run_one(task):
     n, d, e, name = task
     gens = build_gens()
     gen = gens[name]
-    seed = BASE_SEED
+    seed = stable_seed(BASE_SEED, "null", name, n, d, e)
     df = shared_simulation(
         gen,
         n,
@@ -130,4 +132,5 @@ if __name__ == "__main__":
             rows.append(f.result())
 
     out = pd.concat(rows, axis=0)
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
     out.to_csv(out_path, index=False)

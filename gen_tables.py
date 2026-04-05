@@ -7,6 +7,8 @@ import os
 import numpy as np
 import pandas as pd
 
+from config_utils import load_config, resolve_output
+
 
 MECHANISM_MAP = {
     "contaminated_kcube": "C",
@@ -255,14 +257,29 @@ def make_power_table(_power, _out_path):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--in", dest="inp", required=True, help="Results directory")
-    ap.add_argument("--out", dest="out_dir", default="assets/tables", help="Output dir for .tex")
+    ap.add_argument("--config", default=None, help="Path to config JSON")
+    ap.add_argument("--in", dest="inp", default=None, help="Results directory")
+    ap.add_argument("--out", dest="out_dir", default=None, help="Output dir for .tex")
     args = ap.parse_args()
 
-    null_summary = pd.read_csv(f"{args.inp}/null_summary.csv")
-    alt_summary = pd.read_csv(f"{args.inp}/alternatives_summary.csv")
-    power_primary = pd.read_csv(f"{args.inp}/power_primary.csv")
+    if args.config is not None:
+        cfg = load_config(args.config)
+        inp = resolve_output(cfg, "comparisons")
+        out_dir = resolve_output(cfg, "assets/tables")
+        power_path = resolve_output(cfg, "powers/power_primary.csv")
+    else:
+        if args.inp is None:
+            raise ValueError("Provide either --config or --in")
+        inp = args.inp
+        out_dir = args.out_dir or "assets/tables"
+        power_path = os.path.join(os.path.dirname(inp), "powers", "power_primary.csv")
 
-    make_calibration_table(null_summary, os.path.join(args.out_dir, "calibration_table.tex"))
-    make_mechanism_map(alt_summary, os.path.join(args.out_dir, "mechanism_map_table.tex"))
-    make_power_table(power_primary, os.path.join(args.out_dir, "power_table.tex"))
+    os.makedirs(out_dir, exist_ok=True)
+
+    null_summary = pd.read_csv(f"{inp}/null_summary.csv")
+    alt_summary = pd.read_csv(f"{inp}/alternatives_summary.csv")
+    power_primary = pd.read_csv(power_path)
+
+    make_calibration_table(null_summary, os.path.join(out_dir, "calibration_table.tex"))
+    make_mechanism_map(alt_summary, os.path.join(out_dir, "mechanism_map_table.tex"))
+    make_power_table(power_primary, os.path.join(out_dir, "power_table.tex"))
