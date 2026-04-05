@@ -4,8 +4,9 @@ import numpy as np
 import pandas as pd
 
 from collections import defaultdict
+from pathlib import Path
 
-from config_utils import load_config
+from config_utils import load_config, resolve_output
 
 
 # One-sided direction per statistic
@@ -168,8 +169,11 @@ if __name__ == "__main__":
     alt_stage = cfg["alt_parallel"]
     run = cfg["run"]
 
-    NULL_PATH = null_stage["out_path"]
-    ALT_PATH = alt_stage["out_path"]
+    NULL_PATH = resolve_output(cfg, null_stage["out_path"])
+    ALT_PATH  = resolve_output(cfg, alt_stage["out_path"])
+    COMP_DIR = Path(cfg["run"]["output_root"]) / "comparisons"
+    COMP_DIR.mkdir(parents=True, exist_ok=True)
+
     ALPHA = shared["alpha"]
     ALPHA_BONF = ALPHA / M_TESTS_ANY
 
@@ -198,7 +202,7 @@ if __name__ == "__main__":
     alt_summary = (alt_tested.groupby(alt_group, dropna=False)["reject"]
                    .mean().reset_index().rename(columns={"reject": "rejection_rate"}))
 
-    null_summary.to_csv("comparisons/null_summary.csv", index=False)
-    alt_summary.to_csv("comparisons/alternatives_summary.csv", index=False)
+    null_summary.to_csv(resolve_output(cfg, "comparisons/null_summary.csv"), index=False)
+    alt_summary.to_csv(resolve_output(cfg, "comparisons/alternatives_summary.csv"), index=False)
 
     print("Wrote: null_crit.csv, null_tested.csv, alternatives_tested.csv, null_summary.csv, alternatives_summary.csv")

@@ -27,13 +27,12 @@ GENS = {
 
 def run_one(_task):
     n, d, e, name = _task
-    tau_df = load_tau_map()
 
     seed = BASE_SEED
 
     _df = shared_simulation(GENS[name], n, d, HOM_DIMS,
                             P, ALPHA, N_SIM,
-                            e, LANDMARK, tau_df, TAU_REF, seed)
+                            e, LANDMARK, TAU_DF, TAU_REF, seed)
     _df['point_cloud'] = name
     return _df
 
@@ -47,6 +46,7 @@ if __name__ == '__main__':
     shared = cfg["shared"]
     stage = cfg["alt_parallel"]
     run = cfg["run"]
+    TAU_DF = load_tau_map(resolve_output(cfg, cfg["tau_parallel"]["out_path"]))
     BASE_SEED = run["base_seed"]
     HOM_DIMS = shared["hom_dims"]
     ALPHA = shared["alpha"]
