@@ -8,7 +8,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from complex_persistence import compute_dtm_vr_diagrams, compute_vr_diagrams
-from config_utils import load_config, resolve_output
+from config_utils import load_config, resolve_output, stable_seed
 from metrics import compute_lengths, concat_lengths_by_dim
 from point_clouds import (
     generate_gaussian,
@@ -98,8 +98,7 @@ def _init_worker():
 
 
 def _seed_stream(base_seed, n_sims):
-    rng = np.random.default_rng(base_seed)
-    return rng.integers(0, 2**31 - 1, size=n_sims, dtype=np.int64)
+    return stable_seed(base_seed)
 
 
 def _cache_path(name, n, d, seed):
@@ -187,6 +186,7 @@ if __name__ == "__main__":
     N_LIST = shared["n_list"]
     D_LIST = shared["d_list"]
     DIMS = shared["hom_dims"]
+    SEED = run["base_seed"]
     OUT_PATH = resolve_output(cfg, stage["out_path"])
     CACHE_ROOT = resolve_output(cfg, stage["cache_root"])
     MAX_WORKERS = run["max_workers"]
@@ -206,8 +206,7 @@ if __name__ == "__main__":
         for name in names:
             for n in N_LIST:
                 for d in D_LIST:
-                    base_seed = abs(hash((name, int(n), int(d), "tau"))) % (2**31 - 1)
-                    seeds = _seed_stream(base_seed, N_SIM).tolist()
+                    seeds = _seed_stream(SEED, N_SIM).tolist()
                     seed_map[(name, n, d)] = seeds
 
         tasks = []
