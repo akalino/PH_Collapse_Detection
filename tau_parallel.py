@@ -98,7 +98,7 @@ def _init_worker():
 
 
 def _seed_stream(base_seed, n_sims):
-    return stable_seed(base_seed)
+    return [stable_seed(base_seed, i) for i in range(n_sims)]
 
 
 def _cache_path(name, n, d, seed):
@@ -206,7 +206,7 @@ if __name__ == "__main__":
         for name in names:
             for n in N_LIST:
                 for d in D_LIST:
-                    seeds = _seed_stream(SEED, N_SIM).tolist()
+                    seeds = _seed_stream(SEED, N_SIM)
                     seed_map[(name, n, d)] = seeds
 
         tasks = []

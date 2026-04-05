@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from config_utils import load_config, resolve_output
+
 
 STAT_NAMES = {
     "total_persistence": "TP",
@@ -30,6 +32,7 @@ def make_power_plots(_args):
     -------
     None, plots saved to results.
     """
+    os.makedirs(_args.out, exist_ok=True)
     df = pd.read_csv(f"{_args.inp}/alternatives_summary.csv")
     df["stat"] = df["stat"].map(lambda x: STAT_NAMES.get(x, x))
     df["filtration"] = df["filtration"].map(lambda x: FILTRATION_NAMES.get(x, x))
@@ -70,6 +73,7 @@ def make_baseline_plots(_args):
     -------
     None, plots saved to results.
     """
+    os.makedirs(_args.out, exist_ok=True)
     df = pd.read_csv(f"{_args.inp}/cov_id_metrics.csv")
 
     metrics = [
@@ -105,16 +109,40 @@ def make_baseline_plots(_args):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--in", dest="inp", required=True, help="Results directory")
-    ap.add_argument("--out", default="assets/figures", help="Output dir for PNGs")
+    ap.add_argument("--config", default=None, help="Path to config JSON")
+    ap.add_argument("--in", dest="inp", default=None, help="Results directory")
+    ap.add_argument("--out", default=None, help="Output dir for PNGs")
     ap.add_argument(
         "--datasets",
         nargs="*",
-        default=["contaminated_kcube", "contaminated_sphere", "contaminated_kplane",
-                 "kplane", "spiked_gaussian",
-                 "torus", "swiss", "paraboloid", "paraboloid_graph"],
+        default=[
+            "contaminated_kcube", "contaminated_sphere", "contaminated_kplane",
+            "kplane", "spiked_gaussian",
+            "torus", "swiss", "paraboloid_graph"
+        ],
         help="Datasets to plot (point_cloud names)",
     )
     args = ap.parse_args()
+
+    if args.config is not None:
+        cfg = load_config(args.config)
+        args.inp = resolve_output(cfg, "comparisons")
+        args.out = resolve_output(cfg, "assets/figures")
+    else:
+        if args.inp is None:
+            raise ValueError("Provide either --config or --in")
+        if args.out is None:
+            args.out = "assets/figures"
+
+    os.makedirs(args.out, exist_ok=True)
+
     make_power_plots(args)
-    make_baseline_plots(args)
+
+    cov_path = os.path.join(os.path.dirname(args.inp), "cov_id", "cov_id_metrics.csv")
+    if os.path.exists(cov_path):
+        temp_inp = args.inp
+        args.inp = os.path.dirname(cov_path)
+        make_baseline_plots(args)
+        args.inp = temp_inp
+    else:
+        print(f"[skip] baseline plots: missing {cov_path}")

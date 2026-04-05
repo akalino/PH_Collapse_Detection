@@ -185,9 +185,9 @@ if __name__ == "__main__":
     crit_df, crit_lookup, null_samples = calibrate(null_df, alpha=ALPHA)
     null_tested = apply_tests(null_df, crit_lookup, null_samples, label="null")
     alt_tested  = apply_tests(alt_df,  crit_lookup, null_samples, label="alt")
-    crit_df.to_csv("comparisons/null_crit.csv", index=False)
-    null_tested.to_csv("comparisons/null_tested.csv", index=False)
-    alt_tested.to_csv("comparisons/alternatives_tested.csv", index=False)
+    crit_df.to_csv(resolve_output(cfg, "comparisons/null_crit.csv"), index=False)
+    null_tested.to_csv(resolve_output(cfg, "comparisons/null_tested.csv"), index=False)
+    alt_tested.to_csv(resolve_output(cfg, "comparisons/alternatives_tested.csv"), index=False)
 
     # Type I error (overall)
     null_summary = (null_tested.groupby(["point_cloud"] + GROUP_COLS + ["stat"], dropna=False)["reject"]

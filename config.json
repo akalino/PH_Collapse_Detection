@@ -59,7 +59,7 @@
       "spiked_gaussian",
       "swiss",
       "torus",
-      "paraboloid",
+      "paraboloid_graph",
       "contaminated_kplane",
       "contaminated_sphere",
       "contaminated_kcube"

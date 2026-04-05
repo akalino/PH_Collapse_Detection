@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import skdim
 
-from config_utils import load_config
+from config_utils import load_config, resolve_output
 
 # Nulls
 from point_clouds import (
@@ -171,7 +171,7 @@ def _run_one(task):
 
 
 def build_cov_id_metrics_csv(
-    out_csv="cov_id/cov_id_metrics.csv",
+    out_csv=OUT_CSV,
     n_list=(10, 50),
     d_list=(5, 10, 20),
     eps_list=(0.05, 0.1, 0.2, 0.5, 1.0, 1.5, 2.0),
@@ -214,9 +214,9 @@ if __name__ == "__main__":
     null_stage = cfg["null_parallel"]
     alt_stage = cfg["alt_parallel"]
     run = cfg["run"]
-    
+    OUT_CSV = resolve_output(cfg, "cov_id/cov_id_metrics.csv")
     build_cov_id_metrics_csv(
-        out_csv="cov_id/cov_id_metrics.csv",
+        out_csv=OUT_CSV,
         n_list=shared["n_list"],
         d_list=shared["d_list"],
         eps_list=shared["eps_list"],
