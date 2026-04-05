@@ -1,0 +1,17 @@
+.git
+.gitignore
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+results/
+assets/
+calibration/*.csv
+comparisons/*.csv
+cov_id/*.csv
+powers/*.csv
+simulations/*.csv
+
+output/

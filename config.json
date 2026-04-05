@@ -1,13 +1,68 @@
 {
-    "tau_q": 0.95,
-    "n_sim": 100,
-    "knn_k": 20,
-    "knn_q": 0.95,
-    "knn_b1": 1.05,
-    "knn_metric": "euclidean",
-    "n_list": [100, 250, 500, 1000],
-    "d_list": [50, 100, 200, 300],
-    "hom_dims": [0, 1, 2],
-    "eps": [0.05, 0.1, 0.2, 0.5, 1.0, 1.5, 2.0],
-    "max_workers": 4
+    "run": {
+        "run_id": "scale_pilot_v1",
+        "output_root": "output/scale_pilot_v1",
+        "max_workers": 8,
+        "base_seed": 17 
+    },
+    "shared": {
+        "n_list": [100, 250, 500, 1000],
+        "d_list": [50, 100, 200, 300],
+        "hom_dims": [0, 1, 2],
+        "eps": [0.05, 0.1, 0.2, 0.5, 1.0, 1.5, 2.0],
+        "alpha": 0.1,
+        "p": 0.1,
+        "n_sim": 100,
+        "landmark": false,
+        "tau_reference_family": "gaussian"
+    },
+    "tau_parallel": {
+        "enabled": true,
+    "out_path": "calibration/tau_map.csv",
+    "cache_root": "calibration/tau_cache",
+    "families": [
+      "gaussian",
+      "noisy_sphere_0.1",
+      "noisy_sphere_0.3",
+      "noisy_sphere_0.5",
+      "uniform_ball",
+      "uniform_ball_noisy0.05",
+      "ell_gaussian_eta1.0_rot",
+      "ell_gaussian_eta0.5_rot",
+      "ell_gaussian_eta0.2_rot",
+      "ell_gaussian_eta0.1_rot",
+      "ell_gaussian_eta0.05_rot"
+    ]
+    },
+    "null_parallel": {
+        "enabled": true,
+        "out_path": "simulations/null_simulation.csv",
+        "families": [
+      "gaussian",
+      "noisy_sphere_0.1",
+      "noisy_sphere_0.3",
+      "noisy_sphere_0.5",
+      "uniform_ball",
+      "uniform_ball_noisy0.05",
+      "ell_gaussian_eta1.0_rot",
+      "ell_gaussian_eta0.5_rot",
+      "ell_gaussian_eta0.2_rot",
+      "ell_gaussian_eta0.1_rot",
+      "ell_gaussian_eta0.05_rot"
+    ]
+    },
+    "alt_parallel": {
+        "enabled": true,
+    "out_path": "simulations/alt_simulation.csv",
+    "families": [
+      "kplane",
+      "spiked_gaussian",
+      "swiss",
+      "torus",
+      "paraboloid",
+      "contaminated_kplane",
+      "contaminated_sphere",
+      "contaminated_kcube"
+    ]
+    }
 }

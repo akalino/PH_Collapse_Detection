@@ -1,3 +1,4 @@
+import argparse
 import os
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -7,6 +8,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from complex_persistence import compute_dtm_vr_diagrams, compute_vr_diagrams
+from config_utils import load_config, resolve_output
 from metrics import compute_lengths, concat_lengths_by_dim
 from point_clouds import (
     generate_gaussian,
@@ -27,15 +29,6 @@ KNN_K = 20
 KNN_Q = 0.95
 KNN_B1 = 1.05
 KNN_METRIC = "euclidean"
-
-N_LIST = [10, 50, 100]
-D_LIST = [5, 10, 20]
-DIMS = [0, 1, 2]
-
-OUT_PATH = "calibration/tau_map.csv"
-CACHE_ROOT = "calibration/tau_cache"
-
-MAX_WORKERS = 3
 
 
 # -----------------------
@@ -182,6 +175,21 @@ def aggregate_group(name, n, d, seeds):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", required=True)
+    args = parser.parse_args()
+    cfg = load_config(args.config)
+
+    shared = cfg["shared"]
+    stage = cfg["tau_parallel"]
+    run = cfg["run"]
+
+    N_LIST = shared["n_list"]
+    D_LIST = shared["d_list"]
+    DIMS = shared["dims"]
+    OUT_PATH = resolve_output(cfg, stage["out_path"])
+    CACHE_ROOT = resolve_output(cfg, stage["cache_root"])
+    MAX_WORKERS = run["max_workers"]
 
     try:
         df = pd.read_csv(OUT_PATH)
