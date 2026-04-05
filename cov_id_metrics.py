@@ -1,3 +1,4 @@
+import argparse
 import os
 from itertools import product
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -5,6 +6,8 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import numpy as np
 import pandas as pd
 import skdim
+
+from config_utils import load_config
 
 # Nulls
 from point_clouds import (
@@ -202,11 +205,21 @@ def build_cov_id_metrics_csv(
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", required=True)
+    args = parser.parse_args()
+    cfg = load_config(args.config)
+
+    shared = cfg["shared"]
+    null_stage = cfg["null_parallel"]
+    alt_stage = cfg["alt_parallel"]
+    run = cfg["run"]
+    
     build_cov_id_metrics_csv(
         out_csv="cov_id/cov_id_metrics.csv",
-        n_list=(10, 50),
-        d_list=(5, 10, 20),
-        eps_list=(0.05, 0.1, 0.2, 0.5, 1.0, 1.5, 2.0),
-        seeds=(17,),      # change to e.g. (11, 17, 23, 29, 31) when ready
-        max_workers=None, # set to os.cpu_count() if you want explicit
+        n_list=shared["n_list"],
+        d_list=shared["d_list"],
+        eps_list=shared["eps_list"],
+        seeds=run["base_seed"],      # change to e.g. (11, 17, 23, 29, 31) when ready
+        max_workers=run["max_workers"], # set to os.cpu_count() if you want explicit
     )

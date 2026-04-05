@@ -1,11 +1,12 @@
+import argparse
+
 import numpy as np
 import pandas as pd
+
 from collections import defaultdict
 
-NULL_PATH = "simulations/null_simulation.csv"
-ALT_PATH  = "simulations/alt_simulation.csv"
+from config_utils import load_config
 
-ALPHA = 0.05
 
 # One-sided direction per statistic
 DIRECTION_BY_STAT = {
@@ -19,7 +20,6 @@ GROUP_COLS = ["n_pts", "dim", "filtration"]     # calibration keys
 STAT_COLS  = ["total_persistence", "mean_excess_tail"]
 
 M_TESTS_ANY = len(STAT_COLS) * 2
-ALPHA_BONF = ALPHA / M_TESTS_ANY
 
 
 def empirical_pvalue(val, samples, direction):
@@ -158,6 +158,21 @@ def apply_tests(df, crit_lookup, null_samples, label):
     return pd.DataFrame(out)
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", required=True)
+    args = parser.parse_args()
+    cfg = load_config(args.config)
+
+    shared = cfg["shared"]
+    null_stage = cfg["null_parallel"]
+    alt_stage = cfg["alt_parallel"]
+    run = cfg["run"]
+
+    NULL_PATH = null_stage["out_path"]
+    ALT_PATH = alt_stage["out_path"]
+    ALPHA = shared["alpha"]
+    ALPHA_BONF = ALPHA / M_TESTS_ANY
+
     null_df = pd.read_csv(NULL_PATH)
     null_df = null_df.rename(columns={'tail_count': 'mean_excess_tail'})
     alt_df  = pd.read_csv(ALT_PATH)
