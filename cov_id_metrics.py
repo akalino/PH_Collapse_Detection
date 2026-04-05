@@ -220,6 +220,6 @@ if __name__ == "__main__":
         n_list=shared["n_list"],
         d_list=shared["d_list"],
         eps_list=shared["eps_list"],
-        seeds=run["base_seed"],      # change to e.g. (11, 17, 23, 29, 31) when ready
+        seeds=(run["base_seed"],),      # change to e.g. (11, 17, 23, 29, 31) when ready
         max_workers=run["max_workers"], # set to os.cpu_count() if you want explicit
     )

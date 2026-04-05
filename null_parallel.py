@@ -71,9 +71,6 @@ def build_gens():
 
 def run_one(task):
     n, d, e, name = task
-    tau_df = load_tau_map()
-    lm = False
-    landmark = n / 2 if lm else None
     gens = build_gens()
     gen = gens[name]
     seed = BASE_SEED
@@ -87,7 +84,7 @@ def run_one(task):
         N_SIM,
         e,
         LANDMARK,
-        tau_df,
+        TAU_DF,
         TAU_REF,
         seed,
     )
@@ -104,6 +101,7 @@ if __name__ == "__main__":
     shared = cfg["shared"]
     stage = cfg["null_parallel"]
     run = cfg["run"]
+    TAU_DF = load_tau_map(resolve_output(cfg, cfg["tau_parallel"]["out_path"]))
     BASE_SEED = run["base_seed"]
     HOM_DIMS = shared["hom_dims"]
     ALPHA = shared["alpha"]
