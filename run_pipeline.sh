@@ -42,4 +42,7 @@ run_stage "table generation" \
 run_stage "plot generation" \
   python gen_plots.py --config "${CONFIG_PATH}"
 
+echo "[INFO] Outputs are written directly to persistent storage."
+echo "[INFO] Pipeline completed successfully."
+
 echo "[INFO] Pipeline completed successfully."

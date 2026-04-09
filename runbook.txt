@@ -1,0 +1,23 @@
+export PROJECT_ID="ph-collapse-detection"
+export REGION="us-east1"
+export REPO="ph-collapse"
+export IMAGE="ph-collapse-detection"
+export TAG="trial-v1"
+
+gcloud config set project "${PROJECT_ID}"
+gcloud auth configure-docker "${REGION}-docker.pkg.dev"
+
+docker build -t "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/${IMAGE}:${TAG}" .
+docker push "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/${IMAGE}:${TAG}"
+
+export JOB_NAME="ph-collapse-trial-101"
+export IMAGE_URI="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/${IMAGE}:${TAG}"
+export SA_EMAIL="vertex-jobs@${PROJECT_ID}.iam.gserviceaccount.com"
+export GCS_BUCKET="ph-collapse"
+export GCS_OUTPUT_URI="gs://${GCS_BUCKET}/vertex-runs/ph-collapse-trial-101"
+
+gcloud ai custom-jobs create \
+  --region="${REGION}" \
+  --display-name="${JOB_NAME}" \
+  --service-account="${SA_EMAIL}" \
+  --worker-pool-spec=machine-type=e2-standard-8,replica-count=1,container-image-uri="${IMAGE_URI}"

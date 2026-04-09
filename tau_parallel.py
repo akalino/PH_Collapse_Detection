@@ -23,13 +23,15 @@ from utils import knn_persistence_param_estimation
 
 
 TAU_Q = 0.95
-N_SIM = 100
 
 KNN_K = 20
 KNN_Q = 0.95
 KNN_B1 = 1.05
 KNN_METRIC = "euclidean"
 
+
+def log(_msg):
+    print(f"[TAU] {_msg}", flush=True)
 
 # -----------------------
 # Generator suite
@@ -186,11 +188,15 @@ if __name__ == "__main__":
     N_LIST = shared["n_list"]
     D_LIST = shared["d_list"]
     DIMS = shared["hom_dims"]
+    N_SIM = shared["n_sim"]
     SEED = run["base_seed"]
     OUT_PATH = resolve_output(cfg, stage["out_path"])
     CACHE_ROOT = resolve_output(cfg, stage["cache_root"])
     MAX_WORKERS = run["max_workers"]
 
+    log(f"[TAU] starting calibration")
+    log(f"[TAU] n_list={N_LIST}, d_list={D_LIST}")
+    log(f"[TAU] n_sim={N_SIM}")
     try:
         df = pd.read_csv(OUT_PATH)
         print(">> [CALIBRATION] tau_map already exists")
@@ -204,6 +210,7 @@ if __name__ == "__main__":
 
         seed_map = {}
         for name in names:
+            log(f"[TAU] Running family {name}")
             for n in N_LIST:
                 for d in D_LIST:
                     seeds = _seed_stream(SEED, N_SIM)
