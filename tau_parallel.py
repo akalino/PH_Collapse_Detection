@@ -9,8 +9,11 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from complex_persistence import compute_dtm_vr_diagrams, compute_vr_diagrams
-from config_utils import load_config, resolve_output, resolve_master_tau_map, stable_seed, utc_now_iso
+from complex_persistence import (compute_dtm_vr_diagrams,
+                                 compute_vr_diagrams,
+                                 compute_witness_diagrams)
+from config_utils import (load_config, resolve_output,
+                          resolve_master_tau_map, stable_seed, utc_now_iso)
 from metrics import finite_lengths
 from point_clouds import (
     generate_gaussian,
@@ -29,13 +32,6 @@ from utils import (
 )
 
 warnings.filterwarnings("ignore", category=UserWarning)
-
-TAU_Q = 0.95
-
-KNN_K = 20
-KNN_Q = 0.95
-KNN_B1 = 1.05
-KNN_METRIC = "euclidean"
 
 
 def log(msg):
@@ -137,17 +133,21 @@ def run_one_seed(task):
     max_edge = float(2.0 * cut)
     dtm_max_f = float(4.0 * cut)
     dtm_k = 10
+    max_lands = 100
 
     vr_dgms = compute_vr_diagrams(x, max_edge, _max_dim=max_dim,
                                   _sparse=None, _backend="ripser")
     dtm_dgms = compute_dtm_vr_diagrams(x, dtm_max_f, _k=dtm_k, _max_dim=max_dim)
+    wit_dgms = compute_witness_diagrams(x, max_lands)
 
     payload = {"cut": np.array([cut], dtype=float)}
     for hom_dim in DIMS:
         vr_lengths = finite_lengths(vr_dgms.get(hom_dim, np.empty((0, 2))))
         dtm_lengths = finite_lengths(dtm_dgms.get(hom_dim, np.empty((0, 2))))
+        wit_lengths = finite_lengths(wit_dgms.get(hom_dim, np.empty((0, 2))))
         payload[f"vr_h{hom_dim}"] = vr_lengths
         payload[f"dtm_h{hom_dim}"] = dtm_lengths
+        payload[f"witness_h{hom_dim}"] = wit_lengths
 
     _atomic_save_npz(out_path, **payload)
     return out_path
@@ -202,6 +202,11 @@ if __name__ == "__main__":
     D_LIST = shared["d_list"]
     DIMS = shared["hom_dims"]
     N_SIM = shared["n_sim"]
+    TAU_Q = shared["tau_q"]
+    KNN_K = shared["knn_k"]
+    KNN_Q = shared["knn_q"]
+    KNN_B1 = shared["knn_b1"]
+    KNN_METRIC = shared["knn_metric"]
     SEED = run["base_seed"]
     RUN_ID = run["run_id"]
     OUT_PATH = resolve_output(cfg, stage["out_path"])

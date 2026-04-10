@@ -132,6 +132,7 @@ def shared_simulation(_generator, _n_pts, _dim,
             for hom_dim in _dims:
                 tau_by_filtration_dim[("vr", hom_dim)] = _tau * cut
                 tau_by_filtration_dim[("dtm", hom_dim)] = _tau * (2.0 * cut)
+                tau_by_filtration_dim[("witness", hom_dim)] = _tau * (2.0 * cut)
         else:
             for hom_dim in _dims:
                 tau_by_filtration_dim[("vr", hom_dim)] = lookup_tau(
@@ -139,6 +140,9 @@ def shared_simulation(_generator, _n_pts, _dim,
                 )
                 tau_by_filtration_dim[("dtm", hom_dim)] = lookup_tau(
                     _tau_map, _tau_cloud, _n_pts, _dim, "dtm", hom_dim
+                )
+                tau_by_filtration_dim[("witness", hom_dim)] = lookup_tau(
+                    _tau_map, _tau_cloud, _n_pts, _dim, "witness", hom_dim
                 )
 
         tau_for_stats = {

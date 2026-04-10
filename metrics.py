@@ -1,6 +1,7 @@
-import numpy as np
-
-from complex_persistence import compute_dtm_vr_diagrams, compute_vr_diagrams  # , compute_witness_diagrams
+from complex_persistence import (compute_dtm_vr_diagrams,
+                                 compute_vr_diagrams,
+                                 compute_witness_diagrams,
+                                 pick_landmarks)
 
 
 def finite_lengths(_intervals):
@@ -228,25 +229,9 @@ def choose_dtm_k(n, mass=0.1, min_k=5, max_k=None):
     return k
 
 
-def pick_landmarks(_x, _m, _seed=None):
-    """
-    witness complex for scaling.
-
-    :param _x: Point cloud.
-    :param _m: Number of landmarks.
-    :param _seed: Random seed.
-    :return: Sub-sampled point cloud.
-    """
-    n = _x.shape[0]
-    if _m is None or _m <= 0 or _m >= n:
-        return _x
-    rng = np.random.default_rng(_seed)
-    idx = rng.choice(n, _m, replace=False)
-    return _x[idx]
-
 
 def compute_statistics(_x, _dims, _p, _tau, _knn_est,
-                       _landmark_m=None, _landmark_seed=None, _vr_backend="gudhi"):
+                       _landmark_m=100, _landmark_seed=17, _vr_backend="gudhi"):
     """
     Runs the two tests from a single persistence diagram.
 
@@ -259,27 +244,29 @@ def compute_statistics(_x, _dims, _p, _tau, _knn_est,
     :param _landmark_seed:
     :return:
     """
-    # use_witness = False
-    # _x = pick_landmarks(_x, _landmark_m, _landmark_seed)
+    use_witness = True
+    _x = pick_landmarks(_x, _landmark_m, _landmark_seed)
     out = {}
-    #if use_witness:
-    #    max_alpha_sq = _knn_est**2
-    #    dgms = compute_witness_diagrams(_x, _landmark_m, max_alpha_sq, max(_dims), _landmark_seed)
-    #    out["witness"] = {
-    #        "total_persistence": total_persistence(dgms, _dims, _p),
-    #        "tail_count": tail_count(dgms, _dims, _tau)
-    #    }
+    if use_witness:
+        max_alpha_sq = _knn_est**2
+        tau_wit = _tau if not isinstance(_tau, dict) else _tau["vr"]
+        wit_res = compute_witness_diagrams(_x, _landmark_m, max_alpha_sq, max(_dims), _landmark_seed)
+        print("[WITNESS] complete")
+        out["witness"] = {"tail_count": tail_count(wit_res, _dims,  tau_wit)}
+        out["witness"]["tail_count"] = total_persistence(wit_res, _dims, _p=_p)
 
     tau_vr = _tau if not isinstance(_tau, dict) else _tau["vr"]
     tau_dtm = _tau if not isinstance(_tau, dict) else _tau["dtm"]
 
     vr_res = compute_vr_diagrams(_x, _knn_est, _max_dim=max(_dims), _backend=_vr_backend)
+    print("[VR] complete")
     out['vr'] = {'tail_count': tail_mean_excess(vr_res, _dims, tau_vr)}
     out['vr']['total_persistence'] = total_persistence(vr_res, _dims, _p=_p)
 
     dtm_k = choose_dtm_k(_x.shape[0], mass=0.1, min_k=5)
     dtm_max_f = 2.0 * _knn_est
     dtm_res = compute_dtm_vr_diagrams(_x, dtm_max_f, dtm_k)
+    print("[DTM] complete")
     out['dtm'] = {'tail_count': tail_mean_excess(dtm_res, _dims, tau_dtm)}
     out['dtm']['total_persistence'] = total_persistence(dtm_res, _dims, _p=_p)
     return out

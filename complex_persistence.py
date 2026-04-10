@@ -4,7 +4,23 @@ import gudhi as gd
 from gudhi.dtm_rips_complex import DTMRipsComplex
 from ripser import ripser
 
-#from metrics import pick_landmarks
+
+
+def pick_landmarks(_x, _m, _seed=None):
+    """
+    witness complex for scaling.
+
+    :param _x: Point cloud.
+    :param _m: Number of landmarks.
+    :param _seed: Random seed.
+    :return: Sub-sampled point cloud.
+    """
+    n = _x.shape[0]
+    if _m is None or _m <= 0 or _m >= n:
+        return _x
+    rng = np.random.default_rng(_seed)
+    idx = rng.choice(n, _m, replace=False)
+    return _x[idx]
 
 
 def _diag_by_dim(_tree, _max_dim):
@@ -88,23 +104,21 @@ def compute_dtm_vr_diagrams(_points, _max_filtration=100, _k=10, _q=2, _max_dim=
     return _diag_by_dim(st, _max_dim)
 
 
-# def compute_witness_diagrams(_points, _max_landmarks, _max_alpha=10, _max_dim=3, _seed=None):
-#     """
-#     Computes the Witness complex from landmarks.
-#
-#     :param _points:
-#     :param _max_landmarks:
-#     :param _max_alpha: Should be cut**2.
-#     :param _max_dim:
-#     "param _seed:
-#     :return:
-#     """
-#     x = np.asarray(_points, dtype=float)
-#     l = pick_landmarks(x, _max_landmarks, _seed)
-#
-#     wc = gd.EuclideanWitnessComplex(landmarks=l.tolist(), witnesses=x.tolist())
-#     st = wc.create_simplex_tree(max_alpha_square=_max_alpha, limit_dimension=_max_dim)
-#
-#     st.persistence()
-#     dgms = [st.persistence_intervals_in_dimension(k) for k in range(_max_dim + 1)]
-#     return dgms
+def compute_witness_diagrams(_points, _max_landmarks, _max_alpha=10, _max_dim=3, _seed=None):
+    """
+    Computes the Witness complex from landmarks.
+
+    :param _points:
+    :param _max_landmarks:
+    :param _max_alpha: Should be cut**2.
+    :param _max_dim:
+    "param _seed:
+    :return:
+    """
+    x = np.asarray(_points, dtype=float)
+    l = pick_landmarks(x, _max_landmarks, _seed)
+
+    wc = gd.EuclideanWitnessComplex(landmarks=l.tolist(), witnesses=x.tolist())
+    st = wc.create_simplex_tree(max_alpha_square=_max_alpha, limit_dimension=_max_dim)
+    dgms = _diag_by_dim(st, _max_dim)
+    return dgms

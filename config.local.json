@@ -6,13 +6,19 @@
     "base_seed": 17
   },
   "shared": {
-    "n_list": [100, 200, 500, 1000, 2000, 3000],
+    "n_list": [100, 200],
     "d_list": [50, 100],
     "hom_dims": [0, 1],
     "eps_list": [0.1, 0.2, 0.3, 0.5],
     "alpha": 0.1,
     "p": 0.1,
     "n_sim": 10,
+    "dtm_k": 10,
+    "tau_q": 0.95,
+    "knn_k": 10,
+    "knn_q": 0.95,
+    "knn_b1": 1.05,
+    "knn_metric": "euclidean",
     "landmark": true,
     "tau_reference_family": "gaussian"
   },
