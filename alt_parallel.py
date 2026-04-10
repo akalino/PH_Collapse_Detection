@@ -2,6 +2,7 @@ import argparse
 import os
 
 import pandas as pd
+from tqdm import tqdm
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
@@ -25,6 +26,10 @@ GENS = {
     "contaminated_sphere": generate_noisy_sphere,
     "contaminated_kcube": generate_k_cube
 }
+
+
+def log(msg):
+    print(f"[ALT] {msg}", flush=True)
 
 
 def run_one(_task):
@@ -70,11 +75,12 @@ if __name__ == '__main__':
     if missing:
         raise ValueError(f"Unknown families in config: {missing}")
     tasks = [(n, d, e, name) for n in np_list for d in dim_list for e in eps for name in names]
+    log(f"running {len(tasks)} seed tasks with max_workers={max_workers}")
 
     out_dfs = []
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = [executor.submit(run_one, t) for t in tasks]
-        for f in as_completed(futures):
+        for f in tqdm(as_completed(futures), total=len(futures)):
             try:
                 out_dfs.append(f.result())
             except Exception as ex:
