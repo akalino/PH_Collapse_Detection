@@ -1,18 +1,18 @@
 import argparse
 import os
 
-import numpy as np
 import pandas as pd
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
-from config_utils import load_config, resolve_output, stable_seed
+from config_utils import (load_config, resolve_output,
+                          resolve_master_tau_map, stable_seed)
 from point_clouds import (
     generate_collapsed_linear, generate_spiked_gaussian,
     generate_collapsed_swiss, generate_collapsed_torus, generate_paraboloid_graph,
     generate_contaminated_kplane, generate_k_cube, generate_noisy_sphere
 )
-from utils import load_tau_map, shared_simulation
+from utils import load_tau_map, shared_simulation, validate_required_tau_keys
 
 
 GENS = {
@@ -48,7 +48,7 @@ if __name__ == '__main__':
     shared = cfg["shared"]
     stage = cfg["alt_parallel"]
     run = cfg["run"]
-    TAU_DF = load_tau_map(resolve_output(cfg, cfg["tau_parallel"]["out_path"]))
+    TAU_DF = load_tau_map(resolve_master_tau_map(cfg))
     BASE_SEED = run["base_seed"]
     HOM_DIMS = shared["hom_dims"]
     ALPHA = shared["alpha"]
@@ -64,6 +64,8 @@ if __name__ == '__main__':
     max_workers = run["max_workers"]
     
     names = stage["families"]
+    validate_required_tau_keys(cfg, TAU_DF, families=cfg["tau_parallel"]["families"])
+
     missing = [name for name in names if name not in GENS]
     if missing:
         raise ValueError(f"Unknown families in config: {missing}")

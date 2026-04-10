@@ -1,6 +1,8 @@
 import argparse
 import os
 import time
+import warnings
+
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import numpy as np
@@ -8,8 +10,8 @@ import pandas as pd
 from tqdm import tqdm
 
 from complex_persistence import compute_dtm_vr_diagrams, compute_vr_diagrams
-from config_utils import load_config, resolve_output, stable_seed
-from metrics import compute_lengths, concat_lengths_by_dim
+from config_utils import load_config, resolve_output, resolve_master_tau_map, stable_seed, utc_now_iso
+from metrics import finite_lengths
 from point_clouds import (
     generate_gaussian,
     generate_noisy_sphere,
@@ -18,9 +20,15 @@ from point_clouds import (
     generate_xavier_normal,
     generate_layer_mixes,
 )
-from utils import knn_persistence_param_estimation
+from utils import (
+    append_to_master_tau_map,
+    find_missing_tau_keys,
+    load_tau_map,
+    required_tau_keys_from_config,
+    knn_persistence_param_estimation,
+)
 
-
+warnings.filterwarnings("ignore", category=UserWarning)
 
 TAU_Q = 0.95
 
@@ -30,12 +38,10 @@ KNN_B1 = 1.05
 KNN_METRIC = "euclidean"
 
 
-def log(_msg):
-    print(f"[TAU] {_msg}", flush=True)
+def log(msg):
+    print(f"[TAU] {msg}", flush=True)
 
-# -----------------------
-# Generator suite
-# -----------------------
+
 def wrap(fn, **fixed_kwargs):
     def gen(n_pts, dim, _seed=None):
         return fn(n_pts, dim, _seed=_seed, **fixed_kwargs)
@@ -90,7 +96,6 @@ def build_null_suite():
     return gens
 
 
-# Per-process globals (set by initializer)
 _WORKER_GENS = None
 
 
@@ -128,51 +133,59 @@ def run_one_seed(task):
 
     cut = knn_persistence_param_estimation(x, KNN_K, KNN_Q, KNN_B1, KNN_METRIC)
 
-    max_dim = 2
-    max_edge = float(2.0 * cut)  # inflate so we actually get edges/merges
-    dtm_max_f = float(4.0 * cut)  # match scale inflation for dtm filtration
-    dtm_k = 10  # or reuse your choose_dtm_k if you want
+    max_dim = max(DIMS)
+    max_edge = float(2.0 * cut)
+    dtm_max_f = float(4.0 * cut)
+    dtm_k = 10
 
-    vr_dgms = compute_vr_diagrams(x, max_edge, _max_dim=max_dim, _sparse=None)
+    vr_dgms = compute_vr_diagrams(x, max_edge, _max_dim=max_dim,
+                                  _sparse=None, _backend="ripser")
     dtm_dgms = compute_dtm_vr_diagrams(x, dtm_max_f, _k=dtm_k, _max_dim=max_dim)
 
-    vr = concat_lengths_by_dim(vr_dgms, DIMS)
-    dtm = concat_lengths_by_dim(dtm_dgms, DIMS)
-    if vr.size == 0 and dtm.size == 0:
-        print(f"[warn] empty lengths: {name} n={n} d={d} seed={seed} cut={cut:.4g}")
+    payload = {"cut": np.array([cut], dtype=float)}
+    for hom_dim in DIMS:
+        vr_lengths = finite_lengths(vr_dgms.get(hom_dim, np.empty((0, 2))))
+        dtm_lengths = finite_lengths(dtm_dgms.get(hom_dim, np.empty((0, 2))))
+        payload[f"vr_h{hom_dim}"] = vr_lengths
+        payload[f"dtm_h{hom_dim}"] = dtm_lengths
 
-    _atomic_save_npz(out_path, vr=vr, dtm=dtm, cut=np.array([cut], dtype=float))
+    _atomic_save_npz(out_path, **payload)
     return out_path
 
 
 def aggregate_group(name, n, d, seeds):
-    vr_all = []
-    dtm_all = []
+    rows = []
 
-    for s in seeds:
-        p = _cache_path(name, n, d, s)
-        if not os.path.exists(p):
-            continue
-        z = np.load(p, allow_pickle=False)
-        if z is None:
-            print(f"[warn] broken cached npz files")
-        vr = z["vr"]
-        dtm = z["dtm"]
-        if getattr(vr, "size", 0):
-            vr_all.append(vr)
-        if getattr(dtm, "size", 0):
-            dtm_all.append(dtm)
+    for filtration in ("vr", "dtm"):
+        for hom_dim in DIMS:
+            vals = []
+            arr_name = f"{filtration}_h{hom_dim}"
 
-    vr_cat = np.concatenate(vr_all) if vr_all else np.array([])
-    dtm_cat = np.concatenate(dtm_all) if dtm_all else np.array([])
+            for s in seeds:
+                p = _cache_path(name, n, d, s)
+                if not os.path.exists(p):
+                    continue
+                z = np.load(p, allow_pickle=False)
+                arr = z[arr_name]
+                if getattr(arr, "size", 0):
+                    vals.append(arr)
 
-    tau_vr = float(np.quantile(vr_cat, TAU_Q)) if vr_cat.size else 0.0
-    tau_dtm = float(np.quantile(dtm_cat, TAU_Q)) if dtm_cat.size else 0.0
+            cat = np.concatenate(vals) if vals else np.array([])
+            tau = float(np.quantile(cat, TAU_Q)) if cat.size else 0.0
 
-    return [
-        {"point_cloud": name, "n_pts": n, "dim": d, "filtration": "vr", "tau_q": TAU_Q, "tau": tau_vr},
-        {"point_cloud": name, "n_pts": n, "dim": d, "filtration": "dtm", "tau_q": TAU_Q, "tau": tau_dtm},
-    ]
+            rows.append({
+                "point_cloud": name,
+                "filtration": filtration,
+                "n_pts": int(n),
+                "dim": int(d),
+                "hom_dim": int(hom_dim),
+                "tau_q": TAU_Q,
+                "tau": tau,
+                "calibration_run_id": RUN_ID,
+                "created_at": utc_now_iso(),
+            })
+
+    return rows
 
 
 if __name__ == "__main__":
@@ -190,46 +203,70 @@ if __name__ == "__main__":
     DIMS = shared["hom_dims"]
     N_SIM = shared["n_sim"]
     SEED = run["base_seed"]
+    RUN_ID = run["run_id"]
     OUT_PATH = resolve_output(cfg, stage["out_path"])
-    CACHE_ROOT = resolve_output(cfg, stage["cache_root"])
+    MASTER_TAU_PATH = resolve_master_tau_map(cfg)
+    CACHE_ROOT = stage["cache_root"]
     MAX_WORKERS = run["max_workers"]
+    FAMILIES = stage["families"]
 
-    log(f"[TAU] starting calibration")
-    log(f"[TAU] n_list={N_LIST}, d_list={D_LIST}")
-    log(f"[TAU] n_sim={N_SIM}")
-    try:
-        df = pd.read_csv(OUT_PATH)
-        print(">> [CALIBRATION] tau_map already exists")
-    except FileNotFoundError:
-        print(">> [CALIBRATION] tau_map missing, re-calibrating")
-        os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
-        os.makedirs(CACHE_ROOT, exist_ok=True)
+    os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
+    os.makedirs(os.path.dirname(MASTER_TAU_PATH), exist_ok=True)
+    os.makedirs(CACHE_ROOT, exist_ok=True)
 
-        gens = build_null_suite()
-        names = cfg["tau_parallel"]["families"]
+    log(f"starting tau calibration, run_id={RUN_ID}")
+    log(f"master_tau_map_path={MASTER_TAU_PATH}")
+    log(f"cache_root={CACHE_ROOT}")
 
-        seed_map = {}
-        for name in names:
-            log(f"[TAU] Running family {name}")
-            for n in N_LIST:
-                for d in D_LIST:
-                    seeds = _seed_stream(SEED, N_SIM)
-                    seed_map[(name, n, d)] = seeds
+    master_df = load_tau_map(MASTER_TAU_PATH)
+    required_df = required_tau_keys_from_config(cfg, families=FAMILIES)
+    missing_df = find_missing_tau_keys(required_df, master_df)
 
-        tasks = []
-        for (name, n, d), seeds in seed_map.items():
-            for s in seeds:
-                tasks.append((name, n, d, int(s)))
+    if missing_df.empty:
+        log("no missing tau keys; master tau map already covers requested config")
+        master_df.to_csv(OUT_PATH, index=False)
+        log(f"wrote local tau snapshot to {OUT_PATH}")
+        raise SystemExit(0)
 
-        with ProcessPoolExecutor(max_workers=MAX_WORKERS, initializer=_init_worker) as ex:
-            futs = [ex.submit(run_one_seed, t) for t in tasks]
-            for _ in tqdm(as_completed(futs), total=len(futs)):
-                pass
+    missing_groups = (
+        missing_df[["point_cloud", "n_pts", "dim"]]
+        .drop_duplicates()
+        .sort_values(["point_cloud", "n_pts", "dim"])
+        .reset_index(drop=True)
+    )
 
-        rows = []
-        for (name, n, d), seeds in seed_map.items():
-            rows.extend(aggregate_group(name, n, d, seeds))
+    log(f"missing tau rows={len(missing_df)}, missing groups={len(missing_groups)}")
+    for _, row in missing_groups.iterrows():
+        log(f"missing group point_cloud={row['point_cloud']} n={row['n_pts']} d={row['dim']}")
 
-        df = pd.DataFrame(rows)
-        df.to_csv(OUT_PATH, index=False)
-        print(f"Wrote {OUT_PATH} ({len(df)} rows)")
+    seed_map = {}
+    for _, row in missing_groups.iterrows():
+        name = row["point_cloud"]
+        n = int(row["n_pts"])
+        d = int(row["dim"])
+        seed_map[(name, n, d)] = _seed_stream(SEED, N_SIM)
+
+    tasks = []
+    for (name, n, d), seeds in seed_map.items():
+        for s in seeds:
+            tasks.append((name, n, d, int(s)))
+
+    log(f"running {len(tasks)} seed tasks with max_workers={MAX_WORKERS}")
+
+    with ProcessPoolExecutor(max_workers=MAX_WORKERS, initializer=_init_worker) as ex:
+        futs = [ex.submit(run_one_seed, t) for t in tasks]
+        for _ in tqdm(as_completed(futs), total=len(futs)):
+            pass
+
+    rows = []
+    for (name, n, d), seeds in seed_map.items():
+        log(f"aggregating point_cloud={name} n={n} d={d}")
+        rows.extend(aggregate_group(name, n, d, seeds))
+
+    new_df = pd.DataFrame(rows)
+    updated_master = append_to_master_tau_map(MASTER_TAU_PATH, new_df)
+    updated_master.to_csv(OUT_PATH, index=False)
+
+    log(f"appended {len(new_df)} rows to master tau map")
+    log(f"master rows now={len(updated_master)}")
+    log(f"wrote local tau snapshot to {OUT_PATH}")

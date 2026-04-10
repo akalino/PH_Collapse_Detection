@@ -2,6 +2,7 @@ import numpy as np
 import gudhi as gd
 
 from gudhi.dtm_rips_complex import DTMRipsComplex
+from ripser import ripser
 
 #from metrics import pick_landmarks
 
@@ -22,6 +23,21 @@ def _diag_by_dim(_tree, _max_dim):
     return out
 
 
+def _ripser_diag_by_dim(_ripser_result, _max_dim):
+    """
+    :param _ripser_result:
+    :param _max_dim:
+    """
+    dgms = _ripser_result["dgms"]
+    out = {}
+    for d in range(_max_dim + 1):
+        if d < len(dgms) and len(dgms[d]):
+            out[d] = np.asarray(dgms[d], dtype=float)
+        else:
+            out[d] = np.empty((0, 2))
+    return out
+
+
 def debug_simplex_tree(st, label=""):
     print(f"\n[{label}] simplex_tree dim =", st.dimension())
     print(f"[{label}] num simplices =", st.num_simplices())
@@ -30,18 +46,30 @@ def debug_simplex_tree(st, label=""):
     print(f"[{label}] filtration min/max =", min(fvals), max(fvals))
 
 
-def compute_vr_diagrams(_points, _max_edge_length, _max_dim=2, _sparse=None):
+def compute_vr_diagrams(_points, _max_edge_length, _max_dim=2,
+                        _sparse=None, _backend="gudhi"):
     """
 
     :param _points:
     :param _max_edge_length:
     :param _max_dim:
     :param _sparse:
+    :param _backend: gudhi or ripser options
     :return:
     """
-    rips = gd.RipsComplex(points=_points, max_edge_length=_max_edge_length, sparse=_sparse)
-    st = rips.create_simplex_tree(max_dimension=_max_dim + 1)
-    return _diag_by_dim(st, _max_dim)
+    backend = str(_backend).lower()
+
+    if backend == "gudhi":
+        rips = gd.RipsComplex(points=_points, max_edge_length=_max_edge_length, sparse=_sparse)
+        st = rips.create_simplex_tree(max_dimension=_max_dim + 1)
+        return _diag_by_dim(st, _max_dim)
+    if backend == "ripser":
+        if _sparse is not None:
+            raise ValueError("Ripser backend does not support sparse")
+        res = ripser(np.asarray(_points, dtype=float),
+                     maxdim=int(_max_dim),
+                     thresh=float(_max_edge_length))
+        return _ripser_diag_by_dim(res, _max_dim)
 
 
 def compute_dtm_vr_diagrams(_points, _max_filtration=100, _k=10, _q=2, _max_dim=2):

@@ -2,10 +2,10 @@ import argparse
 import os
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
-import numpy as np
 import pandas as pd
 
-from config_utils import load_config, resolve_output, stable_seed
+from config_utils import (load_config, resolve_output,
+                          resolve_master_tau_map, stable_seed)
 from point_clouds import (
     generate_gaussian,
     generate_noisy_sphere,
@@ -14,7 +14,7 @@ from point_clouds import (
     generate_xavier_normal,
     generate_layer_mixes,
 )
-from utils import load_tau_map, shared_simulation
+from utils import load_tau_map, shared_simulation, validate_required_tau_keys
 
 
 def wrap(fn, **fixed_kwargs):
@@ -103,7 +103,7 @@ if __name__ == "__main__":
     shared = cfg["shared"]
     stage = cfg["null_parallel"]
     run = cfg["run"]
-    TAU_DF = load_tau_map(resolve_output(cfg, cfg["tau_parallel"]["out_path"]))
+    TAU_DF = load_tau_map(resolve_master_tau_map(cfg))
     BASE_SEED = run["base_seed"]
     HOM_DIMS = shared["hom_dims"]
     ALPHA = shared["alpha"]
@@ -119,6 +119,7 @@ if __name__ == "__main__":
     max_workers = run["max_workers"]
     
     names = stage["families"]
+    validate_required_tau_keys(cfg, TAU_DF, families=cfg["tau_parallel"]["families"])
     GENS = build_gens()
     missing = [name for name in names if name not in GENS]
     if missing:

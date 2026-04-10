@@ -18,21 +18,22 @@
     },
     "tau_parallel": {
         "enabled": true,
-    "out_path": "calibration/tau_map.csv",
-    "cache_root": "calibration/tau_cache",
-    "families": [
-      "gaussian",
-      "noisy_sphere_0.1",
-      "noisy_sphere_0.3",
-      "noisy_sphere_0.5",
-      "uniform_ball",
-      "uniform_ball_noisy0.05",
-      "ell_gaussian_eta1.0_rot",
-      "ell_gaussian_eta0.5_rot",
-      "ell_gaussian_eta0.2_rot",
-      "ell_gaussian_eta0.1_rot",
-      "ell_gaussian_eta0.05_rot"
-    ]
+        "master_tau_map": "/gcs/ph-collapse/calibration/master_tau_map.csv",
+        "out_path": "calibration/tau_map.csv",
+        "cache_root": "calibration/tau_cache",
+        "families": [
+          "gaussian",
+          "noisy_sphere_0.1",
+          "noisy_sphere_0.3",
+          "noisy_sphere_0.5",
+          "uniform_ball",
+          "uniform_ball_noisy0.05",
+          "ell_gaussian_eta1.0_rot",
+          "ell_gaussian_eta0.5_rot",
+          "ell_gaussian_eta0.2_rot",
+          "ell_gaussian_eta0.1_rot",
+          "ell_gaussian_eta0.05_rot"
+        ]
     },
     "null_parallel": {
         "enabled": true,

@@ -32,9 +32,10 @@ def concat_lengths_by_dim(_diagrams_by_dim, _dims):
     return np.concatenate(all_len) if all_len else np.array([])
 
 
-def compute_lengths(_x, _dims, _knn_est, _sparse=None):
+def compute_lengths(_x, _dims, _knn_est, _sparse=None, _vr_backend="gudhi"):
     max_dim = int(max(_dims)) if len(_dims) else 0
-    vr_res = compute_vr_diagrams(_x, _knn_est, _max_dim=max_dim, _sparse=_sparse)
+    vr_res = compute_vr_diagrams(_x, _knn_est, _max_dim=max_dim,
+                                 _sparse=_sparse, _backend=_vr_backend)
 
     dtm_k = choose_dtm_k(_x.shape[0], mass=0.1, min_k=5)
     dtm_max_f = 2.0 * _knn_est
@@ -245,7 +246,7 @@ def pick_landmarks(_x, _m, _seed=None):
 
 
 def compute_statistics(_x, _dims, _p, _tau, _knn_est,
-                       _landmark_m=None, _landmark_seed=None):
+                       _landmark_m=None, _landmark_seed=None, _vr_backend="gudhi"):
     """
     Runs the two tests from a single persistence diagram.
 
@@ -272,7 +273,7 @@ def compute_statistics(_x, _dims, _p, _tau, _knn_est,
     tau_vr = _tau if not isinstance(_tau, dict) else _tau["vr"]
     tau_dtm = _tau if not isinstance(_tau, dict) else _tau["dtm"]
 
-    vr_res = compute_vr_diagrams(_x, _knn_est)
+    vr_res = compute_vr_diagrams(_x, _knn_est, _max_dim=max(_dims), _backend=_vr_backend)
     out['vr'] = {'tail_count': tail_mean_excess(vr_res, _dims, tau_vr)}
     out['vr']['total_persistence'] = total_persistence(vr_res, _dims, _p=_p)
 
