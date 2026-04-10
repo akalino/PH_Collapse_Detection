@@ -1,0 +1,36 @@
+taskGroups:
+  - taskCount: 1
+    taskSpec:
+      runnables:
+        - container:
+            imageUri: us-east1-docker.pkg.dev/ph-collapse-detection/ph-collapse/ph-collapse-detection:trial-v2
+            entrypoint: bash
+            commands:
+              - -lc
+              - |
+                set -euo pipefail
+                export CONFIG_PATH=/mnt/disks/configs/config.batch.json
+                echo "[INFO] CONFIG_PATH=${CONFIG_PATH}"
+                bash /app/run_pipeline.sh
+      volumes:
+        - gcs:
+            remotePath: ph-collapse
+          mountPath: /mnt/disks/ph-collapse
+      computeResource:
+          cpuMilli: 16000
+          memoryMib: 120000
+      maxRetryCount: 0
+      maxRunDuration: 172800s
+
+allocationPolicy:
+  instances:
+    - policy:
+        machineType: e2-highmem-16
+
+logsPolicy:
+  destination: CLOUD_LOGGING
+
+labels:
+  app: ph-collapse
+  runner: batch
+  run: scale1

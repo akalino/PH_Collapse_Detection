@@ -125,4 +125,7 @@ distributional collapse (deviation from full-dimension null models).
 
 ### How to run
 
+1. Copy the config to GCS: ```gcloud storage cp config.batch.json gs://ph-collapse/configs/config.batch.json```
+2. Use the batch_job.yaml as the spec
+3. gcloud batch jobs submit ph-collapse-batch-scale1 --location=us-east1 --config=batch_job.yaml
 `./run_pipeline.sh`

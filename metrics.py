@@ -251,7 +251,6 @@ def compute_statistics(_x, _dims, _p, _tau, _knn_est,
         max_alpha_sq = _knn_est**2
         tau_wit = _tau if not isinstance(_tau, dict) else _tau["vr"]
         wit_res = compute_witness_diagrams(_x, _landmark_m, max_alpha_sq, max(_dims), _landmark_seed)
-        print("[WITNESS] complete")
         out["witness"] = {"tail_count": tail_count(wit_res, _dims,  tau_wit)}
         out["witness"]["tail_count"] = total_persistence(wit_res, _dims, _p=_p)
 
@@ -259,14 +258,12 @@ def compute_statistics(_x, _dims, _p, _tau, _knn_est,
     tau_dtm = _tau if not isinstance(_tau, dict) else _tau["dtm"]
 
     vr_res = compute_vr_diagrams(_x, _knn_est, _max_dim=max(_dims), _backend=_vr_backend)
-    print("[VR] complete")
     out['vr'] = {'tail_count': tail_mean_excess(vr_res, _dims, tau_vr)}
     out['vr']['total_persistence'] = total_persistence(vr_res, _dims, _p=_p)
 
     dtm_k = choose_dtm_k(_x.shape[0], mass=0.1, min_k=5)
     dtm_max_f = 2.0 * _knn_est
     dtm_res = compute_dtm_vr_diagrams(_x, dtm_max_f, dtm_k)
-    print("[DTM] complete")
     out['dtm'] = {'tail_count': tail_mean_excess(dtm_res, _dims, tau_dtm)}
     out['dtm']['total_persistence'] = total_persistence(dtm_res, _dims, _p=_p)
     return out

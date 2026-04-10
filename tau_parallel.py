@@ -156,7 +156,7 @@ def run_one_seed(task):
 def aggregate_group(name, n, d, seeds):
     rows = []
 
-    for filtration in ("vr", "dtm"):
+    for filtration in ("vr", "dtm", "witness"):
         for hom_dim in DIMS:
             vals = []
             arr_name = f"{filtration}_h{hom_dim}"
