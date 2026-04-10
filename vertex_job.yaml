@@ -1,0 +1,22 @@
+workerPoolSpecs:
+  - machineSpec:
+      machineType: n1-highmem-32
+    replicaCount: 1
+    diskSpec:
+      bootDiskType: pd-ssd
+      bootDiskSizeGb: 200
+    containerSpec:
+      imageUri: us-east1-docker.pkg.dev/ph-collapse-detection/ph-collapse/ph-collapse-detection:trial-v1
+      env:
+        - name: CONFIG_PATH
+          value: config.trial.json
+      command:
+        - bash
+        - -lc
+      args:
+        - |
+          echo "[DEBUG] GCS_OUTPUT_URI=${GCS_OUTPUT_URI:-<unset>}"
+          echo "[DEBUG] CONFIG_PATH=${CONFIG_PATH:-<unset>}"
+          bash /app/run_pipeline.sh
+
+serviceAccount: vertex-jobs@ph-collapse-detection.iam.gserviceaccount.com

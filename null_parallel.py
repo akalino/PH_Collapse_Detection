@@ -2,10 +2,11 @@ import argparse
 import os
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
-import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
-from config_utils import load_config, resolve_output, stable_seed
+from config_utils import (load_config, resolve_output,
+                          resolve_master_tau_map, stable_seed)
 from point_clouds import (
     generate_gaussian,
     generate_noisy_sphere,
@@ -14,7 +15,10 @@ from point_clouds import (
     generate_xavier_normal,
     generate_layer_mixes,
 )
-from utils import load_tau_map, shared_simulation
+from utils import load_tau_map, shared_simulation, validate_required_tau_keys
+
+def log(msg):
+    print(f"[NULL] {msg}", flush=True)
 
 
 def wrap(fn, **fixed_kwargs):
@@ -103,7 +107,7 @@ if __name__ == "__main__":
     shared = cfg["shared"]
     stage = cfg["null_parallel"]
     run = cfg["run"]
-    TAU_DF = load_tau_map(resolve_output(cfg, cfg["tau_parallel"]["out_path"]))
+    TAU_DF = load_tau_map(resolve_master_tau_map(cfg))
     BASE_SEED = run["base_seed"]
     HOM_DIMS = shared["hom_dims"]
     ALPHA = shared["alpha"]
@@ -119,16 +123,17 @@ if __name__ == "__main__":
     max_workers = run["max_workers"]
     
     names = stage["families"]
+    validate_required_tau_keys(cfg, TAU_DF, families=cfg["tau_parallel"]["families"])
     GENS = build_gens()
     missing = [name for name in names if name not in GENS]
     if missing:
         raise ValueError(f"Unknown families in config: {missing}")
     tasks = [(n, d, e, name) for n in np_list for d in dim_list for e in eps_list for name in names]
-
+    log(f"running {len(tasks)} seed tasks with max_workers={max_workers}")
     rows = []
     with ProcessPoolExecutor(max_workers=max_workers) as ex:
         futs = [ex.submit(run_one, t) for t in tasks]
-        for f in as_completed(futs):
+        for f in tqdm(as_completed(futs), total=len(futs)):
             rows.append(f.result())
 
     out = pd.concat(rows, axis=0)

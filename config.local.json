@@ -1,35 +1,41 @@
 {
   "run": {
     "run_id": "gcp_trial_v1",
-    "output_root": "/gcs/ph-collapse/vertex-runs/ph-collapse-trial-111",
-    "max_workers": 1,
+    "output_root": "ph-collapse-trial-111",
+    "max_workers": 2,
     "base_seed": 17
   },
   "shared": {
-    "n_list": [100, 200, 500, 1000],
+    "n_list": [100, 200],
     "d_list": [50, 100],
     "hom_dims": [0, 1],
     "eps_list": [0.1, 0.2, 0.3, 0.5],
     "alpha": 0.1,
     "p": 0.1,
     "n_sim": 10,
-    "landmark": false,
+    "dtm_k": 10,
+    "tau_q": 0.95,
+    "knn_k": 10,
+    "knn_q": 0.95,
+    "knn_b1": 1.05,
+    "knn_metric": "euclidean",
+    "landmark": true,
     "tau_reference_family": "gaussian"
   },
   "tau_parallel": {
     "enabled": true,
-    "master_tau_map": "/gcs/ph-collapse/calibration/master_tau_map.csv",
+    "master_tau_map": "master_tau_map.csv",
     "out_path": "calibration/tau_map.csv",
-    "cache_root": "/gcs/ph-collapse/calibration/tau_cache",
+    "cache_root": "calibration/tau_cache",
     "families": ["gaussian", "uniform_ball"]
   },
   "null_parallel": {
-    "enabled": false,
+    "enabled": true,
     "out_path": "simulations/null_simulation.csv",
     "families": ["gaussian", "uniform_ball"]
   },
   "alt_parallel": {
-    "enabled": false,
+    "enabled": true,
     "out_path": "simulations/alt_simulation.csv",
     "families": ["kplane", "spiked_gaussian", "torus", "swiss"]
   }
