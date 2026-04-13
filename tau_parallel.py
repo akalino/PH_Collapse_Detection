@@ -135,12 +135,23 @@ def run_one_seed(task):
     dtm_k = 10
     max_lands = 100
 
+    vr_start = time.time()
     vr_dgms = compute_vr_diagrams(x, max_edge, _max_dim=max_dim,
                                   _sparse=None, _backend="ripser")
+    vr_time = time.time() - vr_start
+
+    dtm_start = time.time()
     dtm_dgms = compute_dtm_vr_diagrams(x, dtm_max_f, _k=dtm_k, _max_dim=max_dim)
+    dtm_time = time.time() - dtm_start
+
+    wit_start = time.time()
     wit_dgms = compute_witness_diagrams(x, max_lands)
+    wit_time = time.time() - wit_start
 
     payload = {"cut": np.array([cut], dtype=float)}
+    payload["vr_time"] = np.array([vr_time], dtype=float)
+    payload["dtm_time"] = np.array([dtm_time], dtype=float)
+    payload["witness_time"] = np.array([wit_time], dtype=float)
     for hom_dim in DIMS:
         vr_lengths = finite_lengths(vr_dgms.get(hom_dim, np.empty((0, 2))))
         dtm_lengths = finite_lengths(dtm_dgms.get(hom_dim, np.empty((0, 2))))
@@ -155,6 +166,9 @@ def run_one_seed(task):
 
 def aggregate_group(name, n, d, seeds):
     rows = []
+    vr_times = []
+    dtm_times = []
+    wit_times = []
 
     for filtration in ("vr", "dtm", "witness"):
         for hom_dim in DIMS:
@@ -166,12 +180,24 @@ def aggregate_group(name, n, d, seeds):
                 if not os.path.exists(p):
                     continue
                 z = np.load(p, allow_pickle=False)
+                if "vr_time" in z:
+                    vr_times.extend(
+                        np.atleast_1d(z["vr_time"]).astype(float).tolist())
+                if "dtm_time" in z:
+                    dtm_times.extend(
+                        np.atleast_1d(z["dtm_time"]).astype(float).tolist())
+                if "witness_time" in z:
+                    wit_times.extend(
+                        np.atleast_1d(z['witness_time']).astype(float).tolist())
                 arr = z[arr_name]
                 if getattr(arr, "size", 0):
                     vals.append(arr)
 
             cat = np.concatenate(vals) if vals else np.array([])
             tau = float(np.quantile(cat, TAU_Q)) if cat.size else 0.0
+            vr_mean_time = float(np.mean(vr_times))
+            dtm_mean_time = float(np.mean(dtm_times))
+            witness_times = float(np.mean(wit_times))
 
             rows.append({
                 "point_cloud": name,
@@ -183,6 +209,9 @@ def aggregate_group(name, n, d, seeds):
                 "tau": tau,
                 "calibration_run_id": RUN_ID,
                 "created_at": utc_now_iso(),
+                "vr_mean_time": vr_mean_time,
+                "dtm_mean_time": dtm_mean_time,
+                "witness_mean_time": witness_times
             })
 
     return rows
